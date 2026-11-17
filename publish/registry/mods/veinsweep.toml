@@ -1,0 +1,55 @@
+# VeinSweep 的 Horizon 官方注册表条目（草稿）
+# 目标仓库：https://github.com/horizon-rust/horizon-mods
+# 放到：mods/veinsweep.toml；图标放到：icons/veinsweep.png
+#
+# 提交前必须替换三处占位符：
+#   owners / authors 的 "your-github-login" → 你的 GitHub 登录名
+#   source 的 "your-github-login"           → 公开源码仓库（https://github.com/<你>/<仓库>）
+#   license = "MIT"                          → 你实际选择的许可证
+# 推荐同时补上 owner_ids（与 owners 一一对应）：
+#   gh api users/<login> --jq .id
+id = "veinsweep"
+kind = "native-mod"
+name = "VeinSweep"
+summary = "用镐、斧或空手挖矿石/原木时，按住潜行即可把相连的同类方块一起挖掉；“基础方块”（石头/泥土/沙子类）可在设置里统一开启。掉落、耐久与保护检查都走正常挖矿流程。"
+description = """
+VeinSweep 是一个连锁挖掘模组：手持**镐**对着矿石、手持**斧**对着原木，或**空手**对着原木，
+按住**潜行**（Shift）挖掉一块，与它相连的同类方块会一起被挖掉。
+默认只处理矿石和原木；“基础方块”（石头、泥土、沙子类普通方块）可在设置页用一个开关统一开启，默认关闭。
+
+- 默认只对矿石和原木生效：`#minecraft:ores`、`#c:ores`、`#forge:ores`、`#neoforge:ores` 及 `*_ore`；
+  `#minecraft:logs`、`#c:logs`、`#forge:logs`、`#neoforge:logs` 及 `*_log` / `*_wood` / `*_stem` / `*_hyphae`。
+  默认情况下石头、泥土、沙子、木板、砖块等都不会连锁。
+- 可选“基础方块”（默认关闭，一个开关覆盖三类）：石头类（`#minecraft:base_stone_overworld`、
+  `#minecraft:base_stone_nether`、末地石、方解石等）、泥土类（`#minecraft:dirt`、草方块、灰化土、
+  菌丝体、苔藓块、泥等）、沙子类（`#minecraft:sand`、沙砾等）。开启后按类别连通，
+  例如挖草方块会把相邻的泥土、灰化土一起带走；矿石和原木仍按同名匹配。
+- 工具必须匹配：镐挖矿石、斧砍原木；需要正确工具才有掉落的方块，工具等级不够时不会连锁。
+- 空手也能触发，但只对**原版空手就能获得掉落**的方块生效（`requires_tool == false`，例如原木、菌柄）；
+  矿石、石头等空手本来就不掉落的方块不会连锁。空手不消耗耐久，可在设置页关闭。
+- 每块都走游戏自己的玩家挖矿流程：权限、冒险模式 `can_break`、出生点与区域保护、正确的掉落与附魔、
+  耐久消耗、统计与经验、粒子和音效，与手动挖一块完全一致。
+- 数量上限（默认 32，可选 8–256），剩余耐久低于设定值时立即停止，不会把工具用爆。
+- 设置页可切换触发方式（潜行时/总是）、最大方块数、掉落方式（世界散落/直接入包）、连通范围（六面/含对角）、
+  保留工具耐久（0–10）、空手触发（允许/禁止），以及基础方块（默认禁止）。
+  模组列表里的一行就是总开关。
+
+本版本是 native mod，固定到开发与实测所用的 Horizon 提交 `9f42064c`（Nightly 2026-11-13）。
+它使用的 `player_break` 与 `can_build` 接口目前仍是 Horizon 的待编号 API 片段，因此不能声明 `hooks` 版本；
+Horizon 升级后需要重新构建并发布新版本。
+"""
+authors = ["your-github-login"]
+owners = ["your-github-login"]
+license = "MIT"
+source = "https://github.com/your-github-login/veinsweep"
+icon = "icons/veinsweep.png"
+categories = ["game-mechanics", "utility"]
+tags = ["vein-mining", "chain-mining", "mining", "ores", "logs"]
+
+[[versions]]
+version = "0.2.1"
+published = "2026-11-17"
+game = "26.3"
+file = "veinsweep-0.2.1.hnmod"
+sha256 = "8dd769761698a156e416fcf6e4a83332ffc505640763129494b93f6dcf39426f"
+changelog = "石头类/泥土类/沙子类三个开关合并为“基础方块”（默认禁止）；修复自然地表上基础方块只沿同种方块连成一条线的问题，改为按类别连通；保留空手触发（默认允许）；版本 0.2.1，仍固定 Horizon 提交 9f42064c（Nightly 2026-11-13）。"

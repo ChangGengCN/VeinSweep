@@ -1,0 +1,15 @@
+# 打包产物（由 publish/pack.py 生成，可用源码重建，不入库）
+*.hnmod
+*.minisig
+
+# 构建与校验临时目录/日志
+target/
+build/
+.verify-*/
+plan.json
+*.log
+
+# 系统与编辑器杂项
+Thumbs.db
+desktop.ini
+.DS_Store
