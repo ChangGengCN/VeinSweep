@@ -1,11 +1,15 @@
 # 打包产物（由 publish/pack.py 生成，可用源码重建，不入库）
+*.hmod
 *.hnmod
 *.minisig
 
-# 构建与校验临时目录/日志
+# 固定构建的 SDK 缓存（cargo horizon-mod / 启动器自动取回）
+.horizon/
 target/
 build/
 .verify-*/
+
+# 构建与校验临时文件
 plan.json
 *.log
 

@@ -1,0 +1,14 @@
+[package]
+name = "veinsweep"
+version = "0.3.7"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "VeinSweep: chain mining for Horizon."
+
+[lib]
+name = "veinsweep"
+path = "src/lib.rs"
+
+[dependencies]
+horizon-mod-api = { path = ".horizon/sdk/api/crates/horizon-mod-api" }

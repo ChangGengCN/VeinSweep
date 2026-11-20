@@ -1,0 +1,14 @@
+id = "veinsweep"
+name = "VeinSweep"
+version = "0.3.7"
+description = "连锁挖掘：按住潜行挖掉一个方块，与它相连的同种方块会一起被挖掉，与手持物无关。任何可破坏方块都能连锁；数量上限、连通范围、创造模式连锁与黑名单都可在设置或命令里调整。"
+authors = ["VeinSweep"]
+license = "MIT"
+api = "0.2"
+side = "both"
+capabilities = ["registries"]
+
+[native]
+game = "26.3"
+horizon = "0a875da91dbb0fdcb7ba8c42c11341aa229af51a"
+mixins = "e59da9094f0c2fdda6c627fe9eff22dec6a906f0"

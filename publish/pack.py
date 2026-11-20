@@ -1,68 +1,72 @@
-"""重新打包 VeinSweep 的 .hnmod，并按 Horizon 官方读取器
-(horizon_mods::index::native::Bundle) 的规则做结构校验。
+"""打包 VeinSweep 的 .hmod，并按新版包读取器（horizon_mod_package::Package /
+horizon_mod_package::index::native::Bundle）的规则做结构校验。
 
 用法：python publish/pack.py
-改动源码或 README 之后运行它，然后把打印出的 sha256 更新到
+改动源码后运行它，然后把打印出的 sha256 更新到
 publish/registry/mods/veinsweep.toml 和 publish/SUBMIT.md。
+
+新版格式（Horizon Nightly 2026-11-18，0b14f8a）：
+- 每个 mod 一个 .hmod（zip），根目录是 horizon-mod.toml；
+- 原生 mod 带 Cargo.toml、Cargo.lock 与 src/；
+- 可选 icon.png、assets/<id>/、data/<id>/；
+- .horizon/（SDK 缓存）永远不入包。
 """
 
 import hashlib
-import json
 import pathlib
+import re
 import sys
+import tomllib
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-OUT = ROOT / "publish" / "veinsweep-0.2.1.hnmod"
+MOD = ROOT / "mod"
+OUT = ROOT / "publish" / "veinsweep-0.3.7.hmod"
 
 MOD_ID = "veinsweep"
-VERSION = "0.2.1"
+VERSION = "0.3.7"
 GAME = "26.3"
-# 开发与实测所用的 Horizon 提交（Nightly 2026-11-13）。
-HORIZON = "9f42064c11efe7ef3e5ed2baad7ddc2a3b36eea0"
-# horizon-mixins 的提交：launcher 的 native_mods::MIXINS_REV。
-MIXINS = "5a64af938ec86b00d53d16a408aabc0038fb3e57"
+# 开发与实测所用的 Horizon 提交（Nightly 2026-11-20）。
+HORIZON = "0a875da91dbb0fdcb7ba8c42c11341aa229af51a"
+MIXINS = "e59da9094f0c2fdda6c627fe9eff22dec6a906f0"
 
-FILES = [
+# 根目录允许的固定文件；除此之外只允许 src/、assets/、data/ 下的文件。
+ROOT_FILES = {
+    "horizon-mod.toml",
+    "Cargo.toml",
+    "Cargo.lock",
+    "icon.png",
     "README.md",
-    "chain.rs",
-    "click.rs",
-    "horizon-mixin.toml",
-    "list.rs",
-    "page.rs",
-    "veinsweep.rs",
-]
-
-manifest = {
-    "schema": 1,
-    "id": MOD_ID,
-    "version": VERSION,
-    "game": GAME,
-    "horizon": HORIZON,
-    "mixins": MIXINS,
+    "README.txt",
+    "LICENSE",
+    "LICENSE.md",
+    "LICENCE",
+    "COPYING",
+    "NOTICE",
+    ".gitignore",
 }
+ROOT_DIRS = ("src/", "assets/", "data/")
 
 
-def allowed(rest: str) -> bool:
-    parts = rest.split("/")
-    if rest.endswith(".rs") or rest.endswith(".toml"):
-        return True
-    in_data = len(parts) >= 2 and (
-        parts[0] == "data" or (len(parts) >= 3 and parts[1] == "data")
-    )
-    name = parts[-1]
-    text = len(parts) <= 2 and (
-        any(name.startswith(p) for p in ("README", "LICENSE", "LICENCE", "COPYING", "NOTICE"))
-        or name == ".gitignore"
-    )
-    return in_data or text
+def collect() -> list[pathlib.Path]:
+    files = []
+    for path in sorted(MOD.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(MOD).as_posix()
+        if rel.startswith(".horizon/") or rel.startswith("target/"):
+            continue
+        if rel in ROOT_FILES or rel.startswith(ROOT_DIRS):
+            files.append(path)
+        else:
+            raise SystemExit(f"unexpected package path: {rel}")
+    return files
 
 
 def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    entries = [("horizon-native.json", json.dumps(manifest, indent=2).encode() + b"\n")]
-    for name in sorted(FILES):
-        entries.append((f"mixins/{MOD_ID}/{name}", (ROOT / name).read_bytes()))
+    files = collect()
+    entries = [(p.relative_to(MOD).as_posix(), p.read_bytes()) for p in files]
 
     with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as zf:
         for name, data in entries:
@@ -73,9 +77,11 @@ def main() -> int:
             zf.writestr(info, data)
 
     data = OUT.read_bytes()
-    problems = []
-    names = set()
+    problems: list[str] = []
+    names: set[str] = set()
     total = 0
+    manifest = tomllib.loads((MOD / "horizon-mod.toml").read_text(encoding="utf-8"))
+
     with zipfile.ZipFile(OUT) as zf:
         for info in zf.infolist():
             if info.is_dir():
@@ -90,59 +96,51 @@ def main() -> int:
             if name in names:
                 problems.append(f"duplicate path: {name}")
             names.add(name)
-            if name == "mod.wasm":
-                problems.append("mod.wasm is refused")
-            if name == "horizon-mod.toml" or name.startswith(("assets/", "data/")):
-                problems.append(f"content entry in a code-only .hnmod: {name}")
-                continue
             raw = zf.read(info)
             total += len(raw)
             if len(raw) > 64 << 20 or total > 64 << 20:
-                problems.append("bundle exceeds 64 MiB")
-        if "horizon-native.json" not in names:
-            problems.append("missing horizon-native.json")
-        if f"mixins/{MOD_ID}/horizon-mixin.toml" not in names:
-            problems.append("missing horizon-mixin.toml")
+                problems.append("package exceeds 64 MiB")
+        if "horizon-mod.toml" not in names:
+            problems.append("missing horizon-mod.toml")
+        if "Cargo.toml" not in names or not any(n.startswith("src/") for n in names):
+            problems.append("native mod needs Cargo.toml and src/")
         for name in sorted(names):
-            if name == "horizon-native.json":
+            if name in ROOT_FILES or name.startswith(ROOT_DIRS):
                 continue
-            prefix = f"mixins/{MOD_ID}/"
-            if not name.startswith(prefix):
-                problems.append(f"unexpected native source: {name}")
-            elif not allowed(name[len(prefix):]):
-                problems.append(f"unexpected native source: {name}")
-        parsed = json.loads(zf.read("horizon-native.json"))
-        mixin = zf.read(f"mixins/{MOD_ID}/horizon-mixin.toml").decode()
-
-    if len(names) - 1 > 512:
+            problems.append(f"unexpected package path: {name}")
+        if "mod.wasm" in names:
+            problems.append("mod.wasm is refused in a native mod")
+        # 解包后总大小与文件数限制
+    if len(names) > 512:
         problems.append("more than 512 entries")
-    for key in ("horizon", "mixins"):
-        value = parsed.get(key, "")
-        if len(value) != 40 or any(c not in "0123456789abcdef" for c in value):
-            problems.append(f"{key} must be 40 lowercase hex characters")
 
-    def toml_value(section: str, key: str):
-        current = None
-        for line in mixin.splitlines():
-            line = line.split("#", 1)[0].strip()
-            if line.startswith("[") and line.endswith("]"):
-                current = line[1:-1].strip()
-            elif "=" in line and current == section:
-                k, v = line.split("=", 1)
-                if k.strip() == key:
-                    return v.strip().strip('"')
-        return None
+    # 清单一致性
+    if manifest.get("id") != MOD_ID:
+        problems.append("manifest id differs")
+    if manifest.get("version") != VERSION:
+        problems.append("manifest version differs")
+    native = manifest.get("native", {})
+    if native.get("game") != GAME:
+        problems.append("manifest [native] game differs")
+    for key, expected in (("horizon", HORIZON), ("mixins", MIXINS)):
+        value = native.get(key, "")
+        if value != expected:
+            problems.append(f"manifest [native] {key} differs from the pinned build")
+    if not re.fullmatch(r"[a-z0-9_]{1,64}", manifest.get("id", "")):
+        problems.append("invalid mod id")
+    if manifest.get("api") != "0.2":
+        problems.append('manifest api must be "0.2"')
 
-    if toml_value("mod", "id") != parsed["id"]:
-        problems.append("horizon-mixin.toml [mod] id differs from horizon-native.json")
-    if toml_value("mod", "version") != parsed["version"]:
-        problems.append("horizon-mixin.toml [mod] version differs from horizon-native.json")
-    if toml_value("compatibility", "horizon_revision") != parsed["horizon"]:
-        problems.append("horizon-mixin.toml horizon_revision differs from horizon-native.json")
+    cargo = tomllib.loads((MOD / "Cargo.toml").read_text(encoding="utf-8"))
+    deps = cargo.get("dependencies", {})
+    api = deps.get("horizon-mod-api", {})
+    if api.get("path") != ".horizon/sdk/api/crates/horizon-mod-api":
+        problems.append("Cargo.toml must name the SDK by .horizon/sdk/api/crates/horizon-mod-api")
 
     print(f"file:   {OUT}")
     print(f"size:   {len(data)} bytes")
     print(f"sha256: {hashlib.sha256(data).hexdigest()}")
+    print(f"files:  {len(names)}")
     if problems:
         print("PROBLEMS:")
         for p in problems:
@@ -154,3 +152,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

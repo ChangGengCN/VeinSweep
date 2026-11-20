@@ -1,0 +1,9 @@
+{
+  "veinsweep.setting.sneak": "Only while sneaking",
+  "veinsweep.setting.limit": "Maximum blocks",
+  "veinsweep.setting.inventory": "Drops go to inventory",
+  "veinsweep.setting.diagonal": "Include diagonals",
+  "veinsweep.setting.diagonal.tooltip": "Off: the six face neighbours only; on: all 26 neighbours, including shared edges and corners",
+  "veinsweep.setting.keep": "Keep tool durability",
+  "veinsweep.setting.creative": "Chain in creative mode"
+}
