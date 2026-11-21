@@ -70,7 +70,7 @@
 | 文件 | 扩展名匹配 kind；≤64 MiB；名字与条目一致 | `veinsweep-0.6.1.hmod`，36,714 字节 ✔ |
 | 源码公开仓库 | 必须有，许可证允许分发；reviewer 要读 | 已推送，公开可读 ✔ |
 | GitHub Release 附件 | 文件名必须与条目给出的名字一致 | **缺**（需你上传） |
-| `cargo horizon-mod check` | 提交前自行跑一遍（CI 也会跑） | 本机未安装该子命令，未跑（不阻塞 PR，但建议先跑） |
+| `cargo horizon-mod check` | 提交前自行跑一遍（CI 也会跑） | 已用 `checker@0a875da…` 官方预编译检查器运行，通过（exit 0） |
 | 构建证明 | 原生 mod 固定到确切构建；reviewer 会看 | `native-build` 已产出 `native-0a875da-5d2421133c57`，可复现 |
 
 ---
@@ -134,14 +134,18 @@
 
 ### 4.4 提 PR
 
-1. fork `horizon-rust/horizon-mods`，新建分支。
+1. fork `horizon-rust/horizon-mods`（可直接在 fork 的默认分支 `main` 上提交）。
 2. 加入两个文件：
    - `mods/veinsweep.toml`（来自 `publish/registry/mods/veinsweep.toml`）
    - `icons/veinsweep.png`（来自 `publish/registry/icons/veinsweep.png`）
-3. PR 标题如 `Add VeinSweep`；描述里放第 4.2 步的 release 下载地址，并说明：
+3. PR 标题如 `Add VeinSweep`，并按仓库的 `.github/PULL_REQUEST_TEMPLATE.md` 勾选声明；
+   描述里必须放第 4.2 步的 release 下载地址（`stage` 只从 PR 描述里读链接），并说明：
    - 这是原生 mod，源码仓库地址；
-   - 固定的 Nightly 与 mixins 版本；
-   - 已在本地用 `native-build` 构建并测试的项目。
+   - 固定的 Nightly 2026-11-20（`0a875da`）与 mixins `e59da90`，仅在该构建验证；
+   - 已在本地用 `native-build` 构建并实测；
+   - 连锁由客户端按键触发，专用服务器上不生效；
+   - 与已有 Veinminer / TreeFall 的差异（不限手持物、只在同种方块内扩散、黑名单命令、
+     创造模式开关）。
 4. 等待 `stage` / `check`；按 reviewer 意见修改。
 
 ### 4.5 后续版本
@@ -215,4 +219,17 @@
 - [ ] `[native]` 的 `horizon` / `mixins` 与实际构建一致（0a875da… / e59da90…）
 - [ ] 0.6.1 的 `[[versions]]` 在条目顶部，`game = "26.3"`
 - [ ] 如有公钥：本版本已签名，`signature` 已填写
-- [ ] 已尽量先跑 `cargo horizon-mod check publish/veinsweep-0.6.1.hmod`
+- [x] 已跑 `cargo horizon-mod check publish/veinsweep-0.6.1.hmod`（官方 checker@0a875da，exit 0）
+
+## 9. 本地预检结果（2026-11-21）
+
+使用 registry 仓库 `checker@0a875da91dbb0fdcb7ba8c42c11341aa229af51a` 的预编译检查器
+（ELF，经 WSL 运行），在 fork 的临时提交上执行：
+
+| 命令 | 结果 |
+| --- | --- |
+| `cargo horizon-mod check publish/veinsweep-0.6.1.hmod --kind native-mod` | 通过，exit 0；识别为 `native-1/0a875da…/e59da90…`，36,714 字节，sha256 `af5b5d6b…`，unsigned |
+| `cargo horizon-mod registry review <base> <head> --author ChangGengCN` | 通过，exit 0；仅提示 “a new native-mod by ChangGengCN” |
+| `cargo horizon-mod registry check <base> <head> --files <dir>` | 通过，exit 0 |
+
+这三项与 PR 的 `stage` / `check` 使用同一份固定检查器，条目字段、图标、哈希与包结构均已验证。
