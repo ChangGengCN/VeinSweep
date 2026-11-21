@@ -1,13 +1,15 @@
-// VeinSweep：按住潜行挖掉一个方块时，把与它相连的同类方块一起挖掉。
+// VeinSweep：按住触发键（默认 V，可在 选项 → 控制 中改）挖掉一个方块时，
+// 把与它相连的同类方块一起挖掉。
 //
 // 触发点是 mod API 的 `break_block` 钩子（服务端，对应 NeoForge 的
 // `BreakBlockEvent`）；连锁破坏使用 `PlayerRef::destroy_block`，走游戏自己的
 // `ServerPlayerGameMode.destroyBlock`：权限、工具判定、掉落、耐久、统计/经验、
 // 粒子和音效都与手动挖一块完全一致。
 use mod_api::{
-    self, BreakBlockEvent, Command, CommandArgumentValue, CommandSource, Flow, Hooks, Host,
-    HostBlockStates, RegisterCommandsEvent, RegistrationContext, Registrar, RunModCommandEvent,
-    ServerHost, SettingSpec, Text,
+    self, BreakBlockEvent, ClientHost, ClientTickPostEvent, Command, CommandArgumentValue,
+    CommandSource, Flow, Hooks, Host, HostBlockStates, KeyConflictContext, KeyRegistration,
+    RegisterCommandsEvent, RegistrationContext, Registrar, RunModCommandEvent, ServerHost,
+    SettingSpec, Text,
 };
 use std::collections::{HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -24,6 +26,20 @@ static CHAINING: AtomicBool = AtomicBool::new(false);
 
 /// 黑名单缓存；命令修改后整体替换。
 static BLACKLIST: Mutex<Option<Arc<HashSet<String>>>> = Mutex::new(None);
+
+/// 触发键的映射 id 与默认键。玩家可在 选项 → 控制 → VeinSweep 里改成
+/// 任意键盘键或鼠标键；按住它破坏方块才会连锁。
+const TRIGGER_MAPPING: &str = "trigger";
+const TRIGGER_DEFAULT_KEY: &str = "key.keyboard.v";
+
+/// 客户端每 tick 采到的触发键状态；服务端的 `break_block` 读它。
+/// 单人/LAN 主机里客户端与服务端同进程，静态变量对两侧都可见。
+static TRIGGER_HELD: AtomicBool = AtomicBool::new(false);
+
+/// 按键状态属于哪名玩家（本机客户端的玩家 UUID）。
+/// LAN 里服务端会收到多名玩家的破坏事件，用它把触发键限定在本机玩家身上，
+/// 避免主机按着键时远程玩家的方块也被连锁。
+static TRIGGER_OWNER: Mutex<Option<u128>> = Mutex::new(None);
 
 /// 最大方块数的可选范围（设置页滑块）。
 const LIMIT_MIN: f64 = 8.0;
@@ -74,11 +90,11 @@ struct VeinSweep;
 #[mod_api::horizon_mod]
 impl Hooks for VeinSweep {
     fn register(&self, r: &mut dyn Registrar, _cx: &RegistrationContext) {
-        let _ = r.register_setting(SettingSpec::toggle(
-            "sneak",
-            "veinsweep.setting.sneak",
-            true,
-        ));
+        // 连锁破坏总开关：关闭后挖方块只破坏手动那一个。
+        let _ = r.register_setting(
+            SettingSpec::toggle("enabled", "veinsweep.setting.enabled", true)
+                .tooltip("veinsweep.setting.enabled.tooltip"),
+        );
         let _ = r.register_setting(SettingSpec::range(
             "limit",
             "veinsweep.setting.limit",
@@ -118,6 +134,30 @@ impl Hooks for VeinSweep {
             "veinsweep.setting.creative",
             false,
         ));
+        // 触发键：列在 选项 → 控制 → VeinSweep 下，默认 V；
+        // 玩家可改成任意键盘键或鼠标键。
+        r.register_key_mapping(
+            KeyRegistration::new(TRIGGER_MAPPING, TRIGGER_DEFAULT_KEY)
+                .label("veinsweep.key.trigger")
+                .category("veinsweep.key.category")
+                .context(KeyConflictContext::InGame),
+        );
+    }
+
+    fn client_tick_post(&self, host: &mut dyn ClientHost, _event: &mut ClientTickPostEvent) {
+        // 只有“正在游玩、且没有打开界面”时才把按键算作按下；
+        // 其余时候清零，避免退出界面后残留按下状态。
+        let held = host.on(ID) && host.playing() && host.is_down(ID, TRIGGER_MAPPING);
+        TRIGGER_HELD.store(held, Ordering::Relaxed);
+        // 用 UUID 记住按键属于本机哪名玩家：客户端读不到玩家名，UUID 两端一致。
+        let owner = if held {
+            host.local_player().map(|player| player.uuid())
+        } else {
+            None
+        };
+        *TRIGGER_OWNER
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = owner;
     }
 
     fn register_commands(&self, _host: &mut dyn ServerHost, event: &mut RegisterCommandsEvent<'_>) {
@@ -172,6 +212,10 @@ impl Hooks for VeinSweep {
         if event.cancelled || !host.on(ID) {
             return Flow::Continue;
         }
+        // 总开关：关闭时连锁不生效，手动挖掉的方块照常破坏。
+        if !setting_bool(host, "enabled", true) {
+            return Flow::Continue;
+        }
         // 连锁中的方块会再次进入这里：放行，让游戏正常破坏。
         if CHAINING.swap(true, Ordering::Relaxed) {
             return Flow::Continue;
@@ -182,7 +226,7 @@ impl Hooks for VeinSweep {
             return Flow::Continue;
         };
         // 旁观者不挖方块。创造模式默认只破一块，需在设置里单独开启连锁；
-        // 开启后仍要满足潜行等其余触发条件。
+        // 开启后仍要满足触发条件。
         let game_mode = player.game_mode(host);
         if game_mode == Some(mod_api::GameMode::Spectator) {
             return Flow::Continue;
@@ -190,13 +234,13 @@ impl Hooks for VeinSweep {
         if game_mode == Some(mod_api::GameMode::Creative) && !setting_bool(host, "creative", false) {
             return Flow::Continue;
         }
-        if setting_bool(host, "sneak", true)
-            && !player.is_secondary_use_active(host).unwrap_or(false)
-        {
+        // 按住触发键才连锁；没按只破坏手动那一个。与手里拿着什么无关。
+        // 按键状态来自本机客户端，因此只对本机玩家生效。
+        if !TRIGGER_HELD.load(Ordering::Relaxed) || !trigger_owner_is(player) {
             return Flow::Continue;
         }
 
-        // 连锁只由「潜行 + 破坏方块」触发，与手里拿着什么无关；
+        // 连锁只由「触发条件 + 破坏方块」触发，与手里拿着什么无关；
         // 并且只在**同种方块**内部扩散：按方块 ID 比较（忽略朝向等状态）。
         let origin = event.state.block().id(host);
         let blacklist = blacklist(host);
@@ -505,6 +549,17 @@ fn setting_number(host: &dyn Host, key: &str, default: f64) -> f64 {
         .and_then(|value| value.parse::<f64>().ok())
         .filter(|value| value.is_finite())
         .unwrap_or(default)
+}
+
+/// 触发键状态是否属于这次破坏的玩家。
+///
+/// 客户端只采样本机玩家的按键；LAN 里服务端会收到其他玩家的破坏事件，
+/// 这里用玩家 UUID 把触发限定在本机玩家身上，避免主机的按键带动别人。
+fn trigger_owner_is(player: mod_api::PlayerRef) -> bool {
+    TRIGGER_OWNER
+        .lock()
+        .map(|owner| *owner == Some(player.uuid()))
+        .unwrap_or(false)
 }
 
 /// 主手物品；空格或空气视为空手。

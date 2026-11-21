@@ -1,9 +1,12 @@
 {
-  "veinsweep.setting.sneak": "Only while sneaking",
+  "veinsweep.setting.enabled": "Chain mining",
+  "veinsweep.setting.enabled.tooltip": "Off: chain mining is fully disabled and breaking a block destroys only that block",
   "veinsweep.setting.limit": "Maximum blocks",
   "veinsweep.setting.inventory": "Drops go to inventory",
   "veinsweep.setting.radius": "Random spread radius",
   "veinsweep.setting.radius.tooltip": "Only for common blocks such as dirt, stone and sand: picks a random connected area inside a cube of this half-size around the origin. Ores and logs always use the full 3x3x3 neighbourhood and ignore this setting.",
   "veinsweep.setting.keep": "Keep tool durability",
-  "veinsweep.setting.creative": "Chain in creative mode"
+  "veinsweep.setting.creative": "Chain in creative mode",
+  "veinsweep.key.trigger": "Chain trigger",
+  "veinsweep.key.category": "VeinSweep"
 }
