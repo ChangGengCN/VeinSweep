@@ -12,6 +12,7 @@ use mod_api::{
 use std::collections::{HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const ID: &str = "veinsweep";
 /// 黑名单文件名，位于 `<游戏目录>/horizon-mod-data/veinsweep/` 下。
@@ -28,6 +29,44 @@ static BLACKLIST: Mutex<Option<Arc<HashSet<String>>>> = Mutex::new(None);
 const LIMIT_MIN: f64 = 8.0;
 const LIMIT_MAX: f64 = 256.0;
 const LIMIT_STEP: f64 = 8.0;
+
+/// 普通方块（泥土、石头、沙子……）随机扩散半径的可选范围与默认值。
+const RADIUS_MIN: f64 = 2.0;
+const RADIUS_MAX: f64 = 8.0;
+const RADIUS_DEFAULT: f64 = 4.0;
+
+/// 矿脉/原木用固定 26 向（整块 3×3×3 邻域）连通。
+const NEIGHBOURS_26: [[i32; 3]; 26] = {
+    let mut offsets = [[0i32; 3]; 26];
+    let mut n = 0;
+    let mut dx = -1;
+    while dx <= 1 {
+        let mut dy = -1;
+        while dy <= 1 {
+            let mut dz = -1;
+            while dz <= 1 {
+                if !(dx == 0 && dy == 0 && dz == 0) {
+                    offsets[n] = [dx, dy, dz];
+                    n += 1;
+                }
+                dz += 1;
+            }
+            dy += 1;
+        }
+        dx += 1;
+    }
+    offsets
+};
+
+/// 普通方块随机扩散用六面相邻，保证挖出来的是一整块连着的区域。
+const NEIGHBOURS_6: [[i32; 3]; 6] = [
+    [1, 0, 0],
+    [-1, 0, 0],
+    [0, 1, 0],
+    [0, -1, 0],
+    [0, 0, 1],
+    [0, 0, -1],
+];
 
 #[derive(Default)]
 struct VeinSweep;
@@ -53,9 +92,18 @@ impl Hooks for VeinSweep {
             "veinsweep.setting.inventory",
             false,
         ));
+        // 只影响泥土、石头、沙子这类“普通方块”的随机扩散范围；
+        // 矿脉/原木固定按 26 向整块邻域连通，不受它影响。
         let _ = r.register_setting(
-            SettingSpec::toggle("diagonal", "veinsweep.setting.diagonal", true)
-                .tooltip("veinsweep.setting.diagonal.tooltip"),
+            SettingSpec::range(
+                "radius",
+                "veinsweep.setting.radius",
+                RADIUS_MIN,
+                RADIUS_MAX,
+                1.0,
+                RADIUS_DEFAULT,
+            )
+            .tooltip("veinsweep.setting.radius.tooltip"),
         );
         let _ = r.register_setting(SettingSpec::range(
             "keep",
@@ -158,73 +206,279 @@ impl Hooks for VeinSweep {
 
         let limit = setting_number(host, "limit", 32.0).clamp(LIMIT_MIN, LIMIT_MAX) as u32;
         let keep = setting_number(host, "keep", 0.0).clamp(0.0, 10.0) as u32;
-        let diagonal = setting_bool(host, "diagonal", true);
         let into_inventory = setting_bool(host, "inventory", false);
         let Some(level) = player.level(host) else {
             return Flow::Continue;
         };
 
-        let offsets = neighbour_offsets(diagonal);
-        let mut seen: HashSet<[i32; 3]> = HashSet::new();
-        seen.insert(event.pos);
-        let mut queue: VecDeque<[i32; 3]> = VecDeque::new();
-        queue.push_back(event.pos);
-        let mut broken = 0u32;
-
-        while let Some(at) = queue.pop_front() {
-            if broken >= limit {
-                break;
-            }
-            for offset in offsets.iter().copied() {
-                let next = [
-                    at[0].saturating_add(offset[0]),
-                    at[1].saturating_add(offset[1]),
-                    at[2].saturating_add(offset[2]),
-                ];
-                if !seen.insert(next) || !level.is_loaded(host, next) {
-                    continue;
-                }
-                let Some(state) = level.block_state(host, next) else {
-                    continue;
-                };
-                if host
-                    .block_states()
-                    .destroy_speed(state)
-                    .is_some_and(|speed| speed < 0.0)
-                {
-                    continue;
-                }
-                if host
-                    .block_states()
-                    .has_block_entity(state)
-                    .unwrap_or(false)
-                {
-                    continue;
-                }
-                let id = state.block().id(host);
-                // 只管同种：方块 ID 与起点不同就不扩散（泥土/草方块、原木/树叶等都不互通）。
-                // 同一 ID 的不同状态（如原木朝向）仍算同种。
-                if id != origin {
-                    continue;
-                }
-                if blacklist.contains(&id) {
-                    continue;
-                }
-                // 保留工具耐久：手持带耐久的物品且剩余耐久低于设定值时立刻停止。
-                if !durability_left(host, player, keep) {
-                    return Flow::Continue;
-                }
-                if player.destroy_block(host, next, into_inventory) {
-                    broken += 1;
-                    queue.push_back(next);
-                    if broken >= limit {
-                        break;
-                    }
-                }
-            }
+        if is_vein_block(&origin) {
+            // 矿脉、原木：“成脉”的方块固定按 26 向（整个 3×3×3 邻域）连通，
+            // 不再受“含对角连通”开关影响，一直挖到尽头，只受上限约束。
+            chain_vein(
+                host,
+                player,
+                level,
+                event.pos,
+                &origin,
+                &blacklist,
+                limit,
+                keep,
+                into_inventory,
+            );
+        } else {
+            // 泥土、石头、沙子：在半径范围内随机生长出一块连通的区域，
+            // 每次形状都不同；范围与上限都是硬约束。
+            let radius = setting_number(host, "radius", RADIUS_DEFAULT)
+                .clamp(RADIUS_MIN, RADIUS_MAX) as i32;
+            chain_scatter(
+                host,
+                player,
+                level,
+                event.pos,
+                &origin,
+                &blacklist,
+                limit,
+                keep,
+                into_inventory,
+                radius,
+            );
         }
         Flow::Continue
     }
+}
+
+/// 矿脉/原木的判定：按方块 ID 的最后一段做后缀匹配。
+///
+/// 矿石（`*_ore`、远古残骸）和原木类（`*_log`、`*_wood`、`*_stem`、`*_hyphae`）
+/// 是成脉分布的方块，固定用 26 向连通；其余方块走随机扩散。
+fn is_vein_block(id: &str) -> bool {
+    let name = id.rsplit(':').next().unwrap_or(id);
+    name == "ancient_debris"
+        || name.ends_with("_ore")
+        || name.ends_with("_log")
+        || name.ends_with("_wood")
+        || name.ends_with("_stem")
+        || name.ends_with("_hyphae")
+}
+
+/// 这个方块能不能作为连锁目标（不能破坏、带方块实体、黑名单里的都不行）。
+fn can_chain(
+    host: &dyn Host,
+    level: mod_api::LevelRef,
+    pos: [i32; 3],
+    origin: &str,
+    blacklist: &HashSet<String>,
+) -> bool {
+    if blacklist.contains(origin) || !level.is_loaded(host, pos) {
+        return false;
+    }
+    let Some(state) = level.block_state(host, pos) else {
+        return false;
+    };
+    if host
+        .block_states()
+        .destroy_speed(state)
+        .is_some_and(|speed| speed < 0.0)
+    {
+        return false;
+    }
+    if host
+        .block_states()
+        .has_block_entity(state)
+        .unwrap_or(false)
+    {
+        return false;
+    }
+    state.block().id(host) == origin
+}
+
+/// 矿脉模式：固定 26 向 BFS，把整条同种矿脉挖完（上限是硬约束）。
+#[allow(clippy::too_many_arguments)]
+fn chain_vein(
+    host: &mut dyn ServerHost,
+    player: mod_api::PlayerRef,
+    level: mod_api::LevelRef,
+    origin_pos: [i32; 3],
+    origin: &str,
+    blacklist: &HashSet<String>,
+    limit: u32,
+    keep: u32,
+    into_inventory: bool,
+) {
+    let mut seen: HashSet<[i32; 3]> = HashSet::new();
+    seen.insert(origin_pos);
+    let mut queue: VecDeque<[i32; 3]> = VecDeque::new();
+    queue.push_back(origin_pos);
+    let mut broken = 0u32;
+
+    while let Some(at) = queue.pop_front() {
+        for offset in NEIGHBOURS_26.iter().copied() {
+            if broken >= limit {
+                return;
+            }
+            let next = [
+                at[0].saturating_add(offset[0]),
+                at[1].saturating_add(offset[1]),
+                at[2].saturating_add(offset[2]),
+            ];
+            if !seen.insert(next) || !can_chain(host, level, next, origin, blacklist) {
+                continue;
+            }
+            if !durability_left(host, player, keep) {
+                return;
+            }
+            if player.destroy_block(host, next, into_inventory) {
+                broken += 1;
+                queue.push_back(next);
+            }
+        }
+    }
+}
+
+/// 普通方块模式：以起点为中心、半边长 `radius` 的立方体内，从起点向外随机生长，
+/// 直到取到随机目标块数（不超过上限）。只走六面相邻，保证挖出的是一整块连通区域；
+/// 随机顺序让每次形状都不同，而立方体范围保证不会出现夸张的大洞。
+#[allow(clippy::too_many_arguments)]
+fn chain_scatter(
+    host: &mut dyn ServerHost,
+    player: mod_api::PlayerRef,
+    level: mod_api::LevelRef,
+    origin_pos: [i32; 3],
+    origin: &str,
+    blacklist: &HashSet<String>,
+    limit: u32,
+    keep: u32,
+    into_inventory: bool,
+    radius: i32,
+) {
+    let mut rng = Rng::new(random_seed(origin_pos, origin));
+    // 目标块数在 60%～100% 上限之间随机，避免每次都顶满上限、形状雷同。
+    let low = ((limit as f64) * 0.6).ceil() as u32;
+    let low = low.max(1).min(limit);
+    let span = (limit - low + 1) as usize;
+    let target = low + rng.below(span) as u32;
+
+    let mut chosen: HashSet<[i32; 3]> = HashSet::new();
+    chosen.insert(origin_pos);
+    let mut frontier: Vec<[i32; 3]> = Vec::new();
+    push_scatter_neighbours(
+        host,
+        level,
+        origin_pos,
+        origin_pos,
+        origin,
+        blacklist,
+        radius,
+        &chosen,
+        &mut frontier,
+    );
+
+    let mut broken = 0u32;
+    while broken < target && !frontier.is_empty() {
+        let index = rng.below(frontier.len());
+        let next = frontier.swap_remove(index);
+        if chosen.contains(&next) {
+            continue;
+        }
+        if !can_chain(host, level, next, origin, blacklist) {
+            continue;
+        }
+        if !durability_left(host, player, keep) {
+            return;
+        }
+        if player.destroy_block(host, next, into_inventory) {
+            chosen.insert(next);
+            broken += 1;
+            push_scatter_neighbours(
+                host,
+                level,
+                next,
+                origin_pos,
+                origin,
+                blacklist,
+                radius,
+                &chosen,
+                &mut frontier,
+            );
+        }
+    }
+}
+
+/// 把 `at` 周围仍在立方体范围内、尚未入队的六面邻居加进随机前沿。
+#[allow(clippy::too_many_arguments)]
+fn push_scatter_neighbours(
+    host: &dyn Host,
+    level: mod_api::LevelRef,
+    at: [i32; 3],
+    center: [i32; 3],
+    origin: &str,
+    blacklist: &HashSet<String>,
+    radius: i32,
+    chosen: &HashSet<[i32; 3]>,
+    frontier: &mut Vec<[i32; 3]>,
+) {
+    for offset in NEIGHBOURS_6.iter().copied() {
+        let next = [
+            at[0].saturating_add(offset[0]),
+            at[1].saturating_add(offset[1]),
+            at[2].saturating_add(offset[2]),
+        ];
+        if chosen.contains(&next) || !within_box(next, center, radius) {
+            continue;
+        }
+        if !can_chain(host, level, next, origin, blacklist) {
+            continue;
+        }
+        frontier.push(next);
+    }
+}
+
+fn within_box(pos: [i32; 3], center: [i32; 3], radius: i32) -> bool {
+    (pos[0] - center[0]).abs() <= radius
+        && (pos[1] - center[1]).abs() <= radius
+        && (pos[2] - center[2]).abs() <= radius
+}
+
+/// 一个很小的 xorshift64 随机数发生器，避免额外依赖。
+struct Rng(u64);
+
+impl Rng {
+    fn new(seed: u64) -> Self {
+        Self(if seed == 0 { 0x9E37_79B9_7F4A_7C15 } else { seed })
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        let mut x = self.0;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        self.0 = x;
+        x
+    }
+
+    fn below(&mut self, bound: usize) -> usize {
+        if bound == 0 {
+            0
+        } else {
+            (self.next_u64() % bound as u64) as usize
+        }
+    }
+}
+
+/// 用当前时间、起点位置和方块 ID 混出一个种子：同样的位置连挖两次也会得到不同形状。
+fn random_seed(pos: [i32; 3], origin: &str) -> u64 {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0);
+    let mut hash = nanos ^ 0x9E37_79B9_7F4A_7C15;
+    for value in pos {
+        hash = hash.rotate_left(7) ^ (value as i64 as u64).wrapping_mul(0x0100_0000_01B3);
+    }
+    for byte in origin.bytes() {
+        hash = hash.wrapping_mul(31).wrapping_add(u64::from(byte));
+    }
+    hash
 }
 
 /// 连锁进行中的标记；离开作用域时清除。
@@ -278,25 +532,6 @@ fn durability_left(
         return true;
     };
     max.saturating_sub(stack.damage()) > keep
-}
-
-/// 六面或含对角的邻居偏移。
-fn neighbour_offsets(diagonal: bool) -> Vec<[i32; 3]> {
-    let mut offsets = Vec::with_capacity(if diagonal { 26 } else { 6 });
-    for dx in -1..=1 {
-        for dy in -1..=1 {
-            for dz in -1..=1 {
-                if dx == 0 && dy == 0 && dz == 0 {
-                    continue;
-                }
-                if !diagonal && (dx as i32).abs() + (dy as i32).abs() + (dz as i32).abs() != 1 {
-                    continue;
-                }
-                offsets.push([dx, dy, dz]);
-            }
-        }
-    }
-    offsets
 }
 
 /// 读取黑名单（缓存一次；命令修改后整体替换）。

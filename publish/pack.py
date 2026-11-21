@@ -21,10 +21,10 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MOD = ROOT / "mod"
-OUT = ROOT / "publish" / "veinsweep-0.3.7.hmod"
+OUT = ROOT / "publish" / "veinsweep-0.4.0.hmod"
 
 MOD_ID = "veinsweep"
-VERSION = "0.3.7"
+VERSION = "0.4.0"
 GAME = "26.3"
 # 开发与实测所用的 Horizon 提交（Nightly 2026-11-20）。
 HORIZON = "0a875da91dbb0fdcb7ba8c42c11341aa229af51a"

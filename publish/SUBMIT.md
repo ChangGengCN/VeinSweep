@@ -3,7 +3,7 @@
 本文按 **2026-11-18 的新规范**（Horizon MOD API 合并后）整理：包格式、清单字段、
 发布流程、本地安装，以及本仓库产出的可提交文件。
 
-参考文档（Horizon `main`；0.3.7 已按 Nightly 2026-11-20 / `0a875da` 复核）：
+参考文档（Horizon `main`；0.4.0 已按 Nightly 2026-11-20 / `0a875da` 复核）：
 
 - `docs/modding/src/reference/manifest.md`（`.hmod`、`horizon-mod.toml`）
 - `docs/modding/src/how-to/native-mods.md`、`docs/modding/src/reference/sdk.md`
@@ -22,7 +22,7 @@
 - 发布仍是 `kind = "native-mod"`，条目在 `horizon-rust/horizon-mods` 的
   `mods/veinsweep.toml`，文件按 sha256 固定；**上架和每个新版本都要人工审核**
   （原生代码以玩家权限运行）。
-- 本仓库已按新规范产出 0.3.7 的可提交包与条目草稿（见第 2 节）。
+- 本仓库已按新规范产出 0.4.0 的可提交包与条目草稿（见第 2 节）。
 - 仍需你本人完成：把源码放到公开仓库、用 GitHub 登录提交表单（或提 PR）；
   条目里的 `owners` / `source` / `license` 是占位符。
 
@@ -58,7 +58,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `publish/veinsweep-0.3.7.hmod` | 真正要上传的分发包 |
+| `publish/veinsweep-0.4.0.hmod` | 真正要上传的分发包 |
 | `publish/registry/mods/veinsweep.toml` | 注册表条目草稿 |
 | `publish/registry/icons/veinsweep.png` | 512×512 PNG 图标 |
 | `publish/pack.py` | 重新打包 + 结构校验（改了源码后运行） |
@@ -67,13 +67,13 @@
 
 ```
 id       veinsweep
-version  0.3.7
+version  0.4.0
 api      0.2
 game     26.3
 horizon  0a875da91dbb0fdcb7ba8c42c11341aa229af51a   (Nightly 2026-11-20)
 mixins   e59da9094f0c2fdda6c627fe9eff22dec6a906f0
-size     31525 bytes
-sha256   a121149296549349853500b3d5f6752168b3efd0e816798d820fb736ef06ff82
+size     33709 bytes
+sha256   6887632f0c5f987029db66b0ab8e2fece0ff01d01937f86ba2a6e849c9e5a60f
 ```
 
 包内文件（6 个）：`horizon-mod.toml`、`Cargo.toml`、`src/lib.rs`、`icon.png`、
@@ -85,29 +85,25 @@ sha256   a121149296549349853500b3d5f6752168b3efd0e816798d820fb736ef06ff82
   与固定构建一致、`Cargo.toml` 只按 SDK 路径依赖、条目数/总大小，全部通过
   （`bundle check: OK`）。
 - `horizon-launcher native-build` 针对 Nightly 2026-11-20（`0a875da`）完整编译通过，
-  0.3.7 产出 `native-0a875da-22e33cf1f346`；随后在同一构建、默认设置
-  （仅潜行开、上限 32、含对角连通开）下进游戏实测：
-  - **砍树不带泥土**：3×3 原木平台（含 `axis=x` 与 `axis=y` 混排）下方紧贴 3×3 泥土，
-    潜行破坏一角原木：9 块原木全部连锁（不同朝向算同种），下方 9 块泥土一块未动；
-  - **挖泥土不带草方块**：3×3 泥土平台里混入 `grass_block`、`coarse_dirt`，下方为石头：
-    只连锁 7 块泥土，草方块、砂土与下方石头全部保留；
-  - **挖沙子不带沙砾或石头**：3×3 沙子平台混入 `gravel`、`stone`，下方为石头：
-    只连锁 7 块沙子，沙砾、石头全部保留；
-  - **黑名单仍生效**：`/veinsweep blacklist add minecraft:sand` 后同一沙平台只破手动一块
-    （其余 8 块保留），`remove` 后再挖恢复整片连锁。
-- 0.3.1 的创造模式门控实测（创造世界、3×3 白色羊毛、空手、上限 32）：
-  - 设置页当时显示 7 项，“创造模式连锁”默认“关”；此时按住潜行挖掉一块，只有 1 块消失；
-  - 在 Config 里打开“创造模式连锁”后，按住潜行挖同一位置，3×3 剩余 8 块全部连锁；
-  - 打开该开关但不按潜行，单击破坏仍然只破 1 块（潜行条件独立生效）。
-- 0.3.2 实测（新建实例、编译产出 `native-0b14f8a-92fe2f73dad2`）：
-  - 设置页只剩 6 项，已无“空手触发”；顺序为 仅潜行时触发、最大方块数、
-    掉落直接入包、含对角连通、保留工具耐久、创造模式连锁；
-  - 生存模式、空手、按住潜行破坏 3×3 白色羊毛：一次连锁挖掉 8 块
-    （连带周围泥土/树叶，受上限 32 约束）。
+  0.4.0 产出 `native-0a875da-e21352119889`；随后在同一构建、默认设置
+  （仅潜行开、上限 32、随机扩散半径 4）下进游戏实测：
+  - **矿脉只靠棱/角相接也能整条带走**：三块铁矿只在对角相接
+    （`(-38,95,10)`、`(-37,96,11)`、`(-36,97,12)`），旁边两块泥土，生存模式钻石镐潜行破坏起点：
+    3 块铁矿石全部连锁（掉落 `raw_iron` 共 3），泥土与石柱未动；
+  - **普通方块随机扩散且不超范围**：9×9×9 石立方（x -60..-52、y 100..108、z 20..28），
+    在东面中心 `(-52,104,24)` 潜行破坏，半径 4：
+    第一次挖掉 29 块、第二次重填后再挖掉 23 块，两次集合只有 11 块重合；
+    两次移除的方块全部落在 `|Δx|,|Δy|,|Δz| <= 4` 的盒内，且都从起点六面连通，
+    均未超过上限 32；
+  - **同 ID 内不跨种类**：上述矿脉测试旁边的泥土、随机扩散测试旁边的黑曜石平台均未被带走；
+  - **黑名单生效**：`/veinsweep blacklist add minecraft:stone` 后同一石立方潜行破坏
+    只破手动一块（掉落 1 个圆石），`remove` 后恢复正常。
+- 历史版本已实测创造模式门控（默认关时只破 1 块，开启后潜行才连锁）、
+  无手持物判定（空手/木头/镐结果一致）等行为，0.4.0 未改动这些路径。
 - 未运行 `cargo horizon-mod check`：本机没有该工具（需 `cargo install --git
   https://github.com/horizon-rust/horizon cargo-horizon-mod`）。提交 PR 后 CI 会跑；
   建议提交前在 Horizon 源码目录执行一次：
-  `cargo run -p cargo-horizon-mod -- check <路径>\veinsweep-0.3.7.hmod`。
+  `cargo run -p cargo-horizon-mod -- check <路径>\veinsweep-0.4.0.hmod`。
 
 ---
 
@@ -115,7 +111,7 @@ sha256   a121149296549349853500b3d5f6752168b3efd0e816798d820fb736ef06ff82
 
 1. **准备版本**：启动器里选/装 Nightly 2026-11-20（`0a875da`）。命令行：
    `horizon-launcher prepare --version nightly-2026-11-20-0a875da`。
-2. **放 mod**：把 `veinsweep-0.3.7.hmod` 放进实例的 `horizon-native-mods/`
+2. **放 mod**：把 `veinsweep-0.4.0.hmod` 放进实例的 `horizon-native-mods/`
    （选项 → 模组 → Open Mod Folder）。
 3. **启用**：启动器 Mods 页打开 VeinSweep，或在实例目录的 `horizon-mods.txt`
    里写 `mod.veinsweep:true`。
@@ -123,7 +119,7 @@ sha256   a121149296549349853500b3d5f6752168b3efd0e816798d820fb736ef06ff82
    `horizon-launcher native-build <实例>\horizon-native-mods --trust-native-code`
    或 `native-build <本仓库>\mod --trust-native-code`。
    构建会下载该构建的预编译游戏与 SDK；首次较慢，之后增量。
-5. **进游戏**：模组列表出现 VeinSweep 0.3.7；选项 → 模组 → Config 可调 6 个设置项。
+5. **进游戏**：模组列表出现 VeinSweep 0.4.0；选项 → 模组 → Config 可调 6 个设置项。
 
 与旧版的差异：目录与启用方式没变，但**必须重新 Build**；旧 `.hnmod` 不再可用。
 如果实例里还有其他旧 native mod（例如 jade/jei 的 `.hnmod`），新版启动器无法编译它们，
@@ -140,7 +136,7 @@ sha256   a121149296549349853500b3d5f6752168b3efd0e816798d820fb736ef06ff82
    `owners`/`authors` 的 `your-github-login`、`source`、`license`；
    推荐补 `owner_ids = [<你的数字 ID>]`（`gh api users/<login> --jq .id`）。
 3. 打开 <https://playhorizon.dev/mods/submit>，GitHub 登录，上传
-   `publish/veinsweep-0.3.7.hmod`，填写页面信息（id、名称、摘要、描述、作者、
+   `publish/veinsweep-0.4.0.hmod`，填写页面信息（id、名称、摘要、描述、作者、
    许可证、源码、1–3 个类别、≤10 个标签）。
 4. 表单会校验文件、把文件放到 staging、开 PR；审核通过并合并后发布。
 
@@ -148,15 +144,15 @@ sha256   a121149296549349853500b3d5f6752168b3efd0e816798d820fb736ef06ff82
 
 1. Fork `horizon-rust/horizon-mods`。
 2. 把 `publish/registry/icons/veinsweep.png` 放到 `icons/veinsweep.png`。
-3. 把 `veinsweep-0.3.7.hmod` 挂到你自己的公开仓库 release，文件名保持
-   `veinsweep-0.3.7.hmod`。
+3. 把 `veinsweep-0.4.0.hmod` 挂到你自己的公开仓库 release，文件名保持
+   `veinsweep-0.4.0.hmod`。
 4. 把 `publish/registry/mods/veinsweep.toml` 放到 `mods/veinsweep.toml`，
    在 PR 描述里链接 release 文件；审核通过后由维护者 staging。
 
 ### 可选：签名
 
 用 minisign 生成密钥，把公钥填进条目的 `key`，把
-`veinsweep-0.3.7.hmod.minisig` 的内容填进 `[[versions]]` 的 `signature`。
+`veinsweep-0.4.0.hmod.minisig` 的内容填进 `[[versions]]` 的 `signature`。
 之后每个版本都必须用同一把私钥签名。
 
 ---
@@ -173,8 +169,8 @@ sha256   a121149296549349853500b3d5f6752168b3efd0e816798d820fb736ef06ff82
 
 ## 6. 提交前检查清单
 
-- [ ] `publish/veinsweep-0.3.7.hmod` 的 sha256 与条目一致
-      （`a121149296549349853500b3d5f6752168b3efd0e816798d820fb736ef06ff82`）
+- [ ] `publish/veinsweep-0.4.0.hmod` 的 sha256 与条目一致
+      （`6887632f0c5f987029db66b0ab8e2fece0ff01d01937f86ba2a6e849c9e5a60f`）
 - [ ] 条目里的 `owners`、`authors`、`source`、`license` 已替换为真实值
 - [ ] 图标是正方形 PNG、64–1024 px、≤256 KiB
 - [ ] 描述 ≥50 字符，类别 1–3 个，标签合法

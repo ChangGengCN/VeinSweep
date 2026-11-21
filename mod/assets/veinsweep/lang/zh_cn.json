@@ -2,8 +2,8 @@
   "veinsweep.setting.sneak": "仅潜行时触发",
   "veinsweep.setting.limit": "最大方块数",
   "veinsweep.setting.inventory": "掉落直接入包",
-  "veinsweep.setting.diagonal": "含对角连通",
-  "veinsweep.setting.diagonal.tooltip": "关：只连上/下/前/后/左/右六面相邻；开：还包括棱和角共点的 26 向相邻",
+  "veinsweep.setting.radius": "随机扩散半径",
+  "veinsweep.setting.radius.tooltip": "只影响泥土、石头、沙子这类普通方块：在以起点为中心、半边长等于该值的立方体内随机扩散；矿脉和原木固定按整块 3×3×3 邻域连通，不受此设置影响",
   "veinsweep.setting.keep": "保留工具耐久",
   "veinsweep.setting.creative": "创造模式连锁"
 }

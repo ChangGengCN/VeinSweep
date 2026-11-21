@@ -2,8 +2,8 @@
   "veinsweep.setting.sneak": "Only while sneaking",
   "veinsweep.setting.limit": "Maximum blocks",
   "veinsweep.setting.inventory": "Drops go to inventory",
-  "veinsweep.setting.diagonal": "Include diagonals",
-  "veinsweep.setting.diagonal.tooltip": "Off: the six face neighbours only; on: all 26 neighbours, including shared edges and corners",
+  "veinsweep.setting.radius": "Random spread radius",
+  "veinsweep.setting.radius.tooltip": "Only for common blocks such as dirt, stone and sand: picks a random connected area inside a cube of this half-size around the origin. Ores and logs always use the full 3x3x3 neighbourhood and ignore this setting.",
   "veinsweep.setting.keep": "Keep tool durability",
   "veinsweep.setting.creative": "Chain in creative mode"
 }
