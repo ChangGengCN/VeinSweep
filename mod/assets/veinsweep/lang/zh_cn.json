@@ -1,12 +1,22 @@
 {
+  "veinsweep.description": "按住潜行键（默认，可在控制中改）挖掉一个方块时，与它相连的同种方块会一起被挖掉。矿脉和原木整条带走，泥土、石头等普通方块在附近连成不规则的一片。只在同种方块内扩散，与手里拿什么无关；可以随时关闭。",
   "veinsweep.setting.enabled": "连锁破坏",
   "veinsweep.setting.enabled.tooltip": "关闭后连锁完全停用，挖方块只破坏手动那一个",
   "veinsweep.setting.limit": "最大方块数",
   "veinsweep.setting.inventory": "掉落直接入包",
-  "veinsweep.setting.radius": "随机扩散半径",
-  "veinsweep.setting.radius.tooltip": "只影响泥土、石头、沙子这类普通方块：在以起点为中心、半边长等于该值的立方体内随机扩散；矿脉和原木固定按整块 3×3×3 邻域连通，不受此设置影响",
   "veinsweep.setting.keep": "保留工具耐久",
   "veinsweep.setting.creative": "创造模式连锁",
   "veinsweep.key.trigger": "连锁触发键",
-  "veinsweep.key.category": "VeinSweep"
+  "veinsweep.key.category": "VeinSweep",
+  "veinsweep.command.added": "已把 %s 加入黑名单，它不再参与连锁。",
+  "veinsweep.command.present": "%s 已在黑名单中。",
+  "veinsweep.command.removed": "已把 %s 移出黑名单。",
+  "veinsweep.command.absent": "%s 不在黑名单中。",
+  "veinsweep.command.list": "黑名单（%s 个）：%s",
+  "veinsweep.command.list.empty": "黑名单为空。",
+  "veinsweep.command.cleared": "已清空黑名单。",
+  "veinsweep.command.clear.empty": "黑名单已经为空。",
+  "veinsweep.command.usage": "用法：/veinsweep blacklist <add|remove|list|clear>",
+  "veinsweep.command.usage.add": "用法：/veinsweep blacklist add <方块>",
+  "veinsweep.command.usage.remove": "用法：/veinsweep blacklist remove <方块>"
 }

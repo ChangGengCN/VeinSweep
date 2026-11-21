@@ -1,4 +1,4 @@
-// VeinSweep：按住触发键（默认 V，可在 选项 → 控制 中改）挖掉一个方块时，
+// VeinSweep：按住触发键（默认左 Shift，可在 选项 → 控制 中改）挖掉一个方块时，
 // 把与它相连的同类方块一起挖掉。
 //
 // 触发点是 mod API 的 `break_block` 钩子（服务端，对应 NeoForge 的
@@ -27,10 +27,14 @@ static CHAINING: AtomicBool = AtomicBool::new(false);
 /// 黑名单缓存；命令修改后整体替换。
 static BLACKLIST: Mutex<Option<Arc<HashSet<String>>>> = Mutex::new(None);
 
-/// 触发键的映射 id 与默认键。玩家可在 选项 → 控制 → VeinSweep 里改成
-/// 任意键盘键或鼠标键；按住它破坏方块才会连锁。
+/// 触发键的映射 id 与默认键。默认绑到潜行键的位置（原版潜行的默认键是左 Shift），
+/// 玩家可在 选项 → 控制 → VeinSweep 里改成任意键盘键或鼠标键；按住它破坏方块才会连锁。
+///
+/// 这里用具体的物理键而不是引用原版 `key.sneak` 映射：按键注册 API 只接受键名，
+/// 不支持别名到另一条映射，所以默认值就是左 Shift；玩家若另行改了原版潜行键，
+/// 这条绑定不会跟着变，需要在控制页单独改。
 const TRIGGER_MAPPING: &str = "trigger";
-const TRIGGER_DEFAULT_KEY: &str = "key.keyboard.v";
+const TRIGGER_DEFAULT_KEY: &str = "key.keyboard.left.shift";
 
 /// 客户端每 tick 采到的触发键状态；服务端的 `break_block` 读它。
 /// 单人/LAN 主机里客户端与服务端同进程，静态变量对两侧都可见。
@@ -46,10 +50,12 @@ const LIMIT_MIN: f64 = 8.0;
 const LIMIT_MAX: f64 = 256.0;
 const LIMIT_STEP: f64 = 8.0;
 
-/// 普通方块（泥土、石头、沙子……）随机扩散半径的可选范围与默认值。
-const RADIUS_MIN: f64 = 2.0;
-const RADIUS_MAX: f64 = 8.0;
-const RADIUS_DEFAULT: f64 = 4.0;
+/// 普通方块（泥土、石头、沙子……）随机扩散的半径，固定值。
+///
+/// 取值 4：以起点为中心是 9×9×9 的立方体，默认上限 32 块只占其中很小一部分，
+/// 形状不会被盒子边缘切得方正，也不会像 6 以上那样在开阔地形挖出过大的洞；
+/// 上调“最大方块数”后仍有足够空间，不会因范围过小而频繁触顶。
+const SCATTER_RADIUS: i32 = 4;
 
 /// 矿脉/原木用固定 26 向（整块 3×3×3 邻域）连通。
 const NEIGHBOURS_26: [[i32; 3]; 26] = {
@@ -108,19 +114,6 @@ impl Hooks for VeinSweep {
             "veinsweep.setting.inventory",
             false,
         ));
-        // 只影响泥土、石头、沙子这类“普通方块”的随机扩散范围；
-        // 矿脉/原木固定按 26 向整块邻域连通，不受它影响。
-        let _ = r.register_setting(
-            SettingSpec::range(
-                "radius",
-                "veinsweep.setting.radius",
-                RADIUS_MIN,
-                RADIUS_MAX,
-                1.0,
-                RADIUS_DEFAULT,
-            )
-            .tooltip("veinsweep.setting.radius.tooltip"),
-        );
         let _ = r.register_setting(SettingSpec::range(
             "keep",
             "veinsweep.setting.keep",
@@ -134,7 +127,7 @@ impl Hooks for VeinSweep {
             "veinsweep.setting.creative",
             false,
         ));
-        // 触发键：列在 选项 → 控制 → VeinSweep 下，默认 V；
+        // 触发键：列在 选项 → 控制 → VeinSweep 下，默认左 Shift；
         // 玩家可改成任意键盘键或鼠标键。
         r.register_key_mapping(
             KeyRegistration::new(TRIGGER_MAPPING, TRIGGER_DEFAULT_KEY)
@@ -183,22 +176,22 @@ impl Hooks for VeinSweep {
         let reply = match action {
             "add" => match event.command.argument("block") {
                 Some(CommandArgumentValue::Id(block)) => add_block(host, &block.to_string()),
-                _ => "用法：/veinsweep blacklist add <方块>".to_owned(),
+                _ => Text::translate("veinsweep.command.usage.add", Vec::new()),
             },
             "remove" => match event.command.argument("block") {
                 Some(CommandArgumentValue::Id(block)) => remove_block(host, &block.to_string()),
-                _ => "用法：/veinsweep blacklist remove <方块>".to_owned(),
+                _ => Text::translate("veinsweep.command.usage.remove", Vec::new()),
             },
             "list" => list_blocks(host),
             "clear" => clear_blocks(host),
-            _ => "用法：/veinsweep blacklist <add|remove|list|clear>".to_owned(),
+            _ => Text::translate("veinsweep.command.usage", Vec::new()),
         };
         match event.source {
             CommandSource::Player { player, .. } => {
-                let _ = player.tell(host, Text::literal(reply));
+                let _ = player.tell(host, reply);
             }
             _ => {
-                let _ = host.commands().feedback(Text::literal(reply));
+                let _ = host.commands().feedback(reply);
             }
         }
         Flow::Cancel
@@ -270,10 +263,8 @@ impl Hooks for VeinSweep {
                 into_inventory,
             );
         } else {
-            // 泥土、石头、沙子：在半径范围内随机生长出一块连通的区域，
+            // 泥土、石头、沙子：在固定半径内随机生长出一块连通的区域，
             // 每次形状都不同；范围与上限都是硬约束。
-            let radius = setting_number(host, "radius", RADIUS_DEFAULT)
-                .clamp(RADIUS_MIN, RADIUS_MAX) as i32;
             chain_scatter(
                 host,
                 player,
@@ -284,7 +275,7 @@ impl Hooks for VeinSweep {
                 limit,
                 keep,
                 into_inventory,
-                radius,
+                SCATTER_RADIUS,
             );
         }
         Flow::Continue
@@ -635,42 +626,54 @@ fn save_blacklist(host: &dyn Host, set: &HashSet<String>) {
     }
 }
 
-fn add_block(host: &mut dyn ServerHost, block: &str) -> String {
+fn add_block(host: &mut dyn ServerHost, block: &str) -> Text {
     let mut set = (*blacklist(host)).clone();
     if !set.insert(block.to_owned()) {
-        return format!("{block} 已在黑名单中。");
+        return Text::translate(
+            "veinsweep.command.present",
+            vec![Text::literal(block)],
+        );
     }
     save_blacklist(host, &set);
     *lock_cache() = Some(Arc::new(set));
-    format!("已把 {block} 加入黑名单，它不再参与连锁。")
+    Text::translate("veinsweep.command.added", vec![Text::literal(block)])
 }
 
-fn remove_block(host: &mut dyn ServerHost, block: &str) -> String {
+fn remove_block(host: &mut dyn ServerHost, block: &str) -> Text {
     let mut set = (*blacklist(host)).clone();
     if !set.remove(block) {
-        return format!("{block} 不在黑名单中。");
+        return Text::translate(
+            "veinsweep.command.absent",
+            vec![Text::literal(block)],
+        );
     }
     save_blacklist(host, &set);
     *lock_cache() = Some(Arc::new(set));
-    format!("已把 {block} 移出黑名单。")
+    Text::translate("veinsweep.command.removed", vec![Text::literal(block)])
 }
 
-fn list_blocks(host: &mut dyn ServerHost) -> String {
+fn list_blocks(host: &mut dyn ServerHost) -> Text {
     let set = blacklist(host);
     if set.is_empty() {
-        return "黑名单为空。".to_owned();
+        return Text::translate("veinsweep.command.list.empty", Vec::new());
     }
     let mut names: Vec<&str> = set.iter().map(String::as_str).collect();
     names.sort_unstable();
-    format!("黑名单（{} 个）：{}", names.len(), names.join(", "))
+    Text::translate(
+        "veinsweep.command.list",
+        vec![
+            Text::literal(names.len().to_string()),
+            Text::literal(names.join(", ")),
+        ],
+    )
 }
 
-fn clear_blocks(host: &mut dyn ServerHost) -> String {
+fn clear_blocks(host: &mut dyn ServerHost) -> Text {
     let set = blacklist(host);
     if set.is_empty() {
-        return "黑名单已经为空。".to_owned();
+        return Text::translate("veinsweep.command.clear.empty", Vec::new());
     }
     save_blacklist(host, &HashSet::new());
     *lock_cache() = Some(Arc::new(HashSet::new()));
-    "已清空黑名单。".to_owned()
+    Text::translate("veinsweep.command.cleared", Vec::new())
 }

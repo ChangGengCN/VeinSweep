@@ -1,0 +1,22 @@
+{
+  "veinsweep.description": "按住潛行鍵（預設，可在控制中改）挖掉一個方塊時，與它相連的同種方塊會一起被挖掉。礦脈和原木整條帶走，泥土、石頭等普通方塊在附近連成不規則的一片。只會在同種方塊內擴散，與手裡拿什麼無關；可隨時關閉。",
+  "veinsweep.setting.enabled": "連鎖破壞",
+  "veinsweep.setting.enabled.tooltip": "關閉後連鎖完全停用，挖方塊只破壞手動那一個",
+  "veinsweep.setting.limit": "最大方塊數",
+  "veinsweep.setting.inventory": "掉落直接入包",
+  "veinsweep.setting.keep": "保留工具耐久",
+  "veinsweep.setting.creative": "創造模式連鎖",
+  "veinsweep.key.trigger": "連鎖觸發鍵",
+  "veinsweep.key.category": "VeinSweep",
+  "veinsweep.command.added": "已把 %s 加入黑名單，它不再參與連鎖。",
+  "veinsweep.command.present": "%s 已在黑名單中。",
+  "veinsweep.command.removed": "已把 %s 移出黑名單。",
+  "veinsweep.command.absent": "%s 不在黑名單中。",
+  "veinsweep.command.list": "黑名單（%s 個）：%s",
+  "veinsweep.command.list.empty": "黑名單為空。",
+  "veinsweep.command.cleared": "已清空黑名單。",
+  "veinsweep.command.clear.empty": "黑名單已經為空。",
+  "veinsweep.command.usage": "用法：/veinsweep blacklist <add|remove|list|clear>",
+  "veinsweep.command.usage.add": "用法：/veinsweep blacklist add <方塊>",
+  "veinsweep.command.usage.remove": "用法：/veinsweep blacklist remove <方塊>"
+}
