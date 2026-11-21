@@ -2,12 +2,14 @@
 # 目标仓库：https://github.com/horizon-rust/horizon-mods
 # 放到：mods/veinsweep.toml；图标放到：icons/veinsweep.png
 #
-# 提交前必须替换三处占位符：
-#   owners / authors 的 "your-github-login" → 你的 GitHub 登录名
-#   source 的 "your-github-login"           → 公开源码仓库（https://github.com/<你>/<仓库>）
-#   license = "MIT"                          → 你实际选择的许可证
-# 推荐同时补上 owner_ids（与 owners 一一对应）：
-#   gh api users/<login> --jq .id
+# 提交前必须替换：
+#   authors / owners 的占位符 → 你的显示名 / GitHub 登录名
+#   owner_ids = [0]            → 与 owners 一一对应的 GitHub 数字 ID
+#                                （gh api users/<login> --jq .id）
+#   source 的 your-github-login/veinsweep → 你的公开源码仓库
+#   license = "MIT"            → 源码仓库实际使用的许可证（必须是 SPDX 名）
+# 可选：签名。生成 minisign 密钥后，把公钥（RW… 开头）填进 key，
+# 并在每个版本的 signature 里放 .minisig 文本；之后每个新版本都必须签名。
 id = "veinsweep"
 kind = "native-mod"
 name = "VeinSweep"
@@ -35,9 +37,12 @@ VeinSweep 是一个连锁挖掘模组：按住潜行键（默认，可在 选项
 - **创造模式默认不连锁**：创造模式下单击破坏只破一块；在设置里打开“创造模式连锁”
   后才连锁，且仍要满足触发键。开启后按创造规则不掉落、不耗耐久；
   旁观者始终不触发。
+- **适用范围**：连锁由客户端按住触发键发起，只在单人游戏或自己主持的局域网世界里生效；
+  专用服务器上没有客户端的按键输入，连锁不会触发（服务端仍可正常加载）。
 """
 authors = ["your-github-login"]
 owners = ["your-github-login"]
+owner_ids = [0]
 license = "MIT"
 source = "https://github.com/your-github-login/veinsweep"
 icon = "icons/veinsweep.png"
@@ -50,4 +55,4 @@ published = "2026-11-21"
 game = "26.3"
 file = "veinsweep-0.6.1.hmod"
 sha256 = "af5b5d6bfd2ee7a9cc800246083c46e3d8db3b91ff1542496afc8642170ae70c"
-changelog = "模组介绍改为简体中文在上、英文在下的组合文本，在游戏内模组列表里直接显示两种语言；界面设置、提示与命令反馈的语言切换不受影响。游戏内行为与 0.6.0 相同。"
+changelog = "构建固定为 Nightly 2026-11-20（0a875da）与 Horizon Mixins e59da90；其他构建未验证。模组介绍改为简体中文在上、英文在下的组合文本，在游戏内模组列表里直接显示两种语言；界面设置、提示与命令反馈的语言切换不受影响。游戏内行为与 0.6.0 相同。"

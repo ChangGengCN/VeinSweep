@@ -1,189 +1,217 @@
-# 把 VeinSweep 上架 Horizon 官方模组集
+# 把 VeinSweep 上架 Horizon 官方注册表
 
-本文按 **2026-11-18 的新规范**（Horizon MOD API 合并后）整理：包格式、清单字段、
-发布流程、本地安装，以及本仓库产出的可提交文件。
+本文按 **Nightly 2026-11-20（`0a875da91dbb0fdcb7ba8c42c11341aa229af51a`）对应的文档**核对：
+`docs/modding/src/how-to/publish.md`、`docs/modding/src/reference/registry-index.md`、
+`horizon-rust/horizon-mods` 的 `README.md` 与 `MOD-POLICY.md`。
 
-参考文档（Horizon `main`；0.6.1 已按 Nightly 2026-11-20 / `0a875da` 复核）：
-
-- `docs/modding/src/reference/manifest.md`（`.hmod`、`horizon-mod.toml`）
-- `docs/modding/src/how-to/native-mods.md`、`docs/modding/src/reference/sdk.md`
-- `docs/modding/src/start/installing.md`（安装目录与启用方式）
-- `docs/modding/src/reference/registry-index.md`、`docs/modding/src/how-to/publish.md`
-- `crates/horizon-mod-vocab/src/hooks/break_block.rs`（钩子声明）
+> 注意：网站上的 “Publish a mod” 页仍描述旧的 `.hnmod` / `native.py` 流程，**不适用于**
+> 当前 SDK 的 `.hmod`；以仓库文档和 `horizon-mods` 的 README 为准。
 
 ---
 
 ## 0. 结论
 
-- 新版把旧的 native mixin 包（`.hnmod` + `horizon-native.json` +
-  `mixins/<id>/horizon-mixin.toml`）换成了 **`.hmod`**：根目录
-  `horizon-mod.toml` + 根 `Cargo.toml` + `src/`。启动器用**预编译游戏 + 签名 SDK**
-  编译 mod，不再为每个 mod 重编整份游戏。
-- 发布仍是 `kind = "native-mod"`，条目在 `horizon-rust/horizon-mods` 的
-  `mods/veinsweep.toml`，文件按 sha256 固定；**上架和每个新版本都要人工审核**
-  （原生代码以玩家权限运行）。
-- 本仓库已按新规范产出 0.6.1 的可提交包与条目草稿（见第 2 节）。
-- 仍需你本人完成：把源码放到公开仓库、用 GitHub 登录提交表单（或提 PR）；
-  条目里的 `owners` / `source` / `license` 是占位符。
+- 当前 SDK 的原生 mod 是 **`.hmod`**（根 `horizon-mod.toml` + 根 `Cargo.toml` + `src/`），
+  注册表 `kind = "native-mod"`；启动器用**固定签名的 SDK 与预编译游戏**在本地编译，
+  注册表**不编译、不执行**提交的代码。
+- **网页表单不能用**：官方说明表单尚不能接收新 SDK 的 `.hmod`（而且当前未开放）。
+  唯一可行方式是把源码放到公开仓库、把包挂到该仓库的 GitHub Release，然后向
+  `horizon-rust/horizon-mods` **提 PR**。
+- 每个新项目、每个 mod 版本都要**人工审核**（原生代码以玩家权限运行，还会做源码安全审查）。
+- 文件以 SHA-256 固定；已发布的文件永不替换，升级只能发新版本。
+- 签名**可选但推荐**；一旦条目里填了公钥，之后每个版本都必须用同一把私钥签名。
+- 本项目 0.6.1 的包与条目草稿已就绪；仍需你本人完成：公开源码仓库、许可证、
+  GitHub Release、`owner_ids`、以及 PR。
 
 ---
 
-## 1. 新旧规范的实际差异
+## 1. 提交入口与两种方式
 
-| 项目 | 旧（Nightly 2026-11-13，9f42064c） | 新（Nightly 2026-11-18 起，0b14f8a 引入） |
+| 方式 | 现状 | 能否用于本项目 |
 | --- | --- | --- |
-| 分发文件 | `.hnmod` | `.hmod` |
-| 清单 | `horizon-native.json`（JSON，schema 1） | `horizon-mod.toml`（TOML，含 `[native]`） |
-| 注入方式 | `mixins/<id>/horizon-mixin.toml` + `native-hooks.json` 命名钩子 | 实现 `mod_api::Hooks` 的方法；`[[inject]]` 只用于函数槽监听 |
-| 依赖 | 游戏源码中的 `horizon_client` 等 crate | `horizon-mod-api`（lib `mod_api`），路径 `.horizon/sdk/api/crates/horizon-mod-api` |
-| 构建 | 把 mod 注入游戏源码后整份 `cargo build -p horizon-client` | 启动器下载固定构建的预编译游戏与签名 SDK，只编译 mod |
-| 触发钩子 | `Game::native_destroy_block` | `Hooks::break_block`（服务端 `BreakBlockEvent`，`canceled`、`exp_to_drop`） |
-| 连锁破坏 | `Game::native_player_break_block` | `PlayerRef::destroy_block(host, pos, into_inventory)` |
-| 设置 | 自定义 `settings` / `settings_click` 按钮列表 + `native_setting` | `Registrar::register_setting(SettingSpec)`，自动出现在 Mods → Config；读取用 `Host::setting` |
-| 安装目录 | `horizon-native-mods/` | **不变**：`horizon-native-mods/` |
-| 启用 | `horizon-mods.txt` 的 `mod.<id>:true` | **不变** |
-| 注册表 | `[[versions]]` 的 `version/published/game/file/sha256` | 同样的 `[[versions]]`，文件改为 `.hmod`；索引记录 `api`（native 为 `native-1/<horizon>/<mixins>`）与 `file` 对象 |
-| 发布入口 | 表单可上传 `.hnmod` | 表单可上传 `.hmod`；也可把文件挂到自有仓库 release 后提 PR |
+| 网页表单 <https://playhorizon.dev/mods/submit> | 目前未开放；官方明确说“不能接收新 SDK 生成的 `.hmod`” | **不能** |
+| 向 `horizon-rust/horizon-mods` 提 PR | 当前唯一支持的入口；文件挂到你自己的 GitHub Release | **用它** |
 
-关键影响：
+### PR 方式的完整链路
 
-- 旧 `.hnmod` 不能再用于新构建；必须换成 `.hmod` 并重新编译。
-- 不再需要 `horizon` / `mixins` 之外的 API 片段兼容声明；但 mod 仍固定到一个
-  确切构建（`[native] horizon`），新 Nightly 上要用就重新构建/发版。
-- 设置页不再是自绘按钮列表，而是 5 个注册设置项；触发键用 `KeyRegistration`
-  注册成 mod 按键映射，出现在 选项 → 控制 → VeinSweep 下，默认是潜行键（左 Shift）。
+1. 你把包挂到自己公开仓库的 GitHub Release，文件名与条目一致。
+2. 你 fork `horizon-rust/horizon-mods`，在 PR 里新增/更新：
+   - `mods/veinsweep.toml`（项目页 + 新 `[[versions]]` 记录）
+   - `icons/veinsweep.png`（首次提交时）
+3. PR 描述里给出文件的 release 下载地址：
+   `https://github.com/<owner>/<repo>/releases/download/<tag>/veinsweep-0.6.1.hmod`
+4. `stage` 工作流下载该文件，核对文件名与 SHA-256 是新记录，运行检查器，
+   把文件放进 `staging` 预发布（每次最多 3 个文件、每个 ≤64 MiB）。
+5. `check` 工作流对比条目与 main、校验包结构、哈希与签名，并构建候选索引。
+6. 审核者（CODEOWNERS）阅读条目、源码与检查报告；原生 mod 另做源码安全审查，
+   可能要求修改。
+7. 合并即发布：文件成为正式 release，项目几分钟内出现在网站与启动器里。
 
 ---
 
-## 2. 已产出的可提交产物
+## 2. 材料清单（逐项对照本项目）
+
+| 项目 | 规范要求 | 我们的现状 |
+| --- | --- | --- |
+| `id` | 清单 `id`，`[a-z0-9_]{1,64}`，全局唯一；已归档 id 被占用 | `veinsweep`；已查 `mods/`、`archive/native-v1/`、`archive/api-0.1/` 均无此 id |
+| `kind` | 带 `[native]` 的 `.hmod` 用 `native-mod` | `native-mod` ✔ |
+| `name` / `summary` | 名称；摘要 ≤160 字符，列表用 | `VeinSweep`；摘要 96 字符 ✔ |
+| `description` | Markdown，去空白后 50–10,000 字符 | 852 字符 ✔ |
+| `authors` / `owners` | 显示用作者；可发版的 GitHub 登录名 | **占位符**，需替换 |
+| `owner_ids` | 与 `owners` 对应的 GitHub 数字 ID（owner 更新与归档 id 确认要用） | **占位符 `[0]`**，需替换 |
+| `license` | SPDX 表达式；必须与源码仓库一致 | 暂写 `MIT`，需你确认并在仓库放 LICENSE |
+| `source` | 源码的 `https://` 地址，公开可读 | **占位符**，需你的公开仓库 |
+| `icon` | `icons/<id>.png`：正方形 PNG，64–1024 px，≤256 KiB | `publish/registry/icons/veinsweep.png`：512×512，39,918 字节 ✔（PR 时放入 `icons/`） |
+| `categories` | 1–3 个，取自该 kind 的类别表 | `game-mechanics`、`utility`（与已上架 Veinminer 的 “Game mechanics / Utility” 一致）✔ |
+| `tags` | ≤10 个、小写 | 4 个，均小写 ✔ |
+| `key` / `signature` | 可选；填了 `key` 则每个版本必须带签名 | 未签名（允许）；若要签名见第 6 节 |
+| `screenshots` | 可选，≤8 张，PNG/JPEG | 无（可选，不阻塞） |
+| `[[versions]]` | `version`、`published`、`game`、`file`、`sha256`、`changelog`；新记录在最上面 | 0.6.1 ✔ |
+| 文件 | 扩展名匹配 kind；≤64 MiB；名字与条目一致 | `veinsweep-0.6.1.hmod`，36,714 字节 ✔ |
+| 源码公开仓库 | 必须有，许可证允许分发；reviewer 要读 | **缺**（当前目录不是 git 仓库） |
+| GitHub Release 附件 | 文件名必须与条目给出的名字一致 | **缺**（需你上传） |
+| `cargo horizon-mod check` | 提交前自行跑一遍（CI 也会跑） | 本机未安装该子命令，未跑（不阻塞 PR，但建议先跑） |
+| 构建证明 | 原生 mod 固定到确切构建；reviewer 会看 | `native-build` 已产出 `native-0a875da-5d2421133c57`，可复现 |
+
+---
+
+## 3. 当前产物、占位符与必须你亲自做的事
+
+`publish/` 下已有：
 
 | 文件 | 用途 |
 | --- | --- |
-| `publish/veinsweep-0.6.1.hmod` | 真正要上传的分发包 |
+| `publish/veinsweep-0.6.1.hmod` | 要发布的分发包 |
 | `publish/registry/mods/veinsweep.toml` | 注册表条目草稿 |
-| `publish/registry/icons/veinsweep.png` | 512×512 PNG 图标 |
-| `publish/pack.py` | 重新打包 + 结构校验（改了源码后运行） |
+| `publish/registry/icons/veinsweep.png` | 正方形图标（512×512） |
+| `publish/pack.py` | 重新打包与结构校验（`python publish/pack.py`） |
 
-包信息：
+条目里的占位符：
 
-```
-id       veinsweep
-version  0.6.1
-api      0.2
-game     26.3
-horizon  0a875da91dbb0fdcb7ba8c42c11341aa229af51a   (Nightly 2026-11-20)
-mixins   e59da9094f0c2fdda6c627fe9eff22dec6a906f0
-size     36714 bytes
-sha256   af5b5d6bfd2ee7a9cc800246083c46e3d8db3b91ff1542496afc8642170ae70c
-```
+- `authors = ["your-github-login"]` → 你的显示名（可多个）。
+- `owners = ["your-github-login"]` → 你的 GitHub 登录名。
+- `owner_ids = [0]` → 对应的 GitHub 数字 ID：`gh api users/<login> --jq .id`。
+- `source = "https://github.com/your-github-login/veinsweep"` → 你的公开源码仓库。
+- `license = "MIT"` → 你选择的 SPDX 许可证，且仓库里要有对应的 LICENSE 文件。
 
-包内文件（7 个）：`horizon-mod.toml`、`Cargo.toml`、`src/lib.rs`、`icon.png`、
-`assets/veinsweep/lang/zh_cn.json`、`assets/veinsweep/lang/en_us.json`、
-`assets/veinsweep/lang/zh_tw.json`。
+只能由你完成的事项：
 
-已做的验证：
-
-- `publish/pack.py`：路径、允许的文件、重复项、清单 id/version/api/`[native]`
-  与固定构建一致、`Cargo.toml` 只按 SDK 路径依赖、条目数/总大小，全部通过
-  （`bundle check: OK`）。
-- `horizon-launcher native-build` 针对 Nightly 2026-11-20（`0a875da`）完整编译通过；
-  0.6.1 构建为 `native-0a875da-5d2421133c57`。0.6.1 只改了清单描述与开发者文档，
-  未改行为，下列行为实测沿用 0.6.0 相同代码的结果。
-  - **模组列表描述（0.6.1 新增）**：启动后在游戏内 Mods 列表选中 VeinSweep 0.6.1，
-    介绍区显示“简体中文段 + 空行 + 英文段”的组合文本，滚动可看完两段；语言设为
-    简体中文时同样如此（该字段不随语言切换，这是清单字段的固定行为）。
-  - **默认潜行键能连锁**：按住左 Shift 在 7×7×7 石立方里挖，一次按住共移除
-    76 块（343→267），全部是同种石头；选项 → 控制 里显示“连锁触发键 = 左Shift”。
-  - **不按触发键不连锁**：松开左 Shift 后只挖一块，立方内只少 1 块（343→342）。
-  - **设置页 5 项与默认值**：逐项核对为 连锁破坏=开、最大方块数=32、
-    掉落直接入包=关、保留工具耐久=0、创造模式连锁=关；“随机扩散半径”已不在设置页。
-  - **改键生效**：选项 → 控制 → VeinSweep → 连锁触发键 从 左Shift 改为 N，
-    实例 `horizon-mods.txt` 写入 `key.veinsweep.trigger:key.keyboard.n`；
-    按住 N 挖一次移除 69 块（343→274）。
-  - **三种语言**：把游戏语言分别切到 `zh_cn`、`zh_tw`、`en_us`，设置页 5 项在
-    三种语言下都正确（如 连锁破坏：开启 / 連鎖破壞：開啟 / Chain mining: ON）；
-    命令 `/veinsweep blacklist list` 在 `zh_tw`、`en_us` 下分别显示
-    “黑名單為空。”、“The blacklist is empty.”（`zh_cn` 为“黑名单为空。”，
-    同一条翻译键）。
-- 0.4.0 已实测矿脉 26 向（仅棱/角相接整条带走）、普通方块随机扩散（两次形状不同、
-  不超范围与上限）、同 ID 不跨种类、黑名单；0.5.0 / 0.6.0 / 0.6.1 未改动这些算法路径
-  （0.6.0 只把扩散半径从设置项改为固定值 4）。
-- 历史版本已实测创造模式门控、无手持物判定（空手/木头/镐结果一致）等行为，
-  0.6.0 / 0.6.1 未改动这些路径。
-- 未运行 `cargo horizon-mod check`：本机没有该工具（需 `cargo install --git
-  https://github.com/horizon-rust/horizon cargo-horizon-mod`）。提交 PR 后 CI 会跑；
-  建议提交前在 Horizon 源码目录执行一次：
-  `cargo run -p cargo-horizon-mod -- check <路径>\veinsweep-0.6.1.hmod`。
+- **GitHub 账号与认证**：fork、提 PR、上传 release 都需要你自己的账号。
+- **公开源码仓库**：把 `mod/`（至少 `horizon-mod.toml`、`Cargo.toml`、`src/`、`assets/`）
+  推到一个公开仓库；页面上的 `source` 必须指向它，且与发布文件对应。
+- **许可证选择**：MIT / Apache-2.0 / GPL 等均可；不允许“保留所有权利”。
+- **GitHub Release**：把 `veinsweep-0.6.1.hmod` 作为附件上传，文件名不要改。
+- **`owner_ids`**：必须与 `owners` 对应，否则 owner 更新与归档 id 确认会失败。
+- **（可选）签名**：决定是否生成 minisign 密钥并固定公钥。
 
 ---
 
-## 3. 本地安装步骤（新版）
+## 4. 可直接照做的步骤
 
-1. **准备版本**：启动器里选/装 Nightly 2026-11-20（`0a875da`）。命令行：
-   `horizon-launcher prepare --version nightly-2026-11-20-0a875da`。
-2. **放 mod**：把 `veinsweep-0.6.1.hmod` 放进实例的 `horizon-native-mods/`
-   （选项 → 模组 → Open Mod Folder）。
-3. **启用**：启动器 Mods 页打开 VeinSweep，或在实例目录的 `horizon-mods.txt`
-   里写 `mod.veinsweep:true`。
-4. **构建**：
-   `horizon-launcher native-build <实例>\horizon-native-mods --trust-native-code`
-   或 `native-build <本仓库>\mod --trust-native-code`。
-   构建会下载该构建的预编译游戏与 SDK；首次较慢，之后增量。
-5. **进游戏**：模组列表出现 VeinSweep 0.6.1；选项 → 模组 → Config 可调 5 个设置项，
-   选项 → 控制 → VeinSweep 可改“连锁触发键”（默认潜行键，即左 Shift）。
+### 4.1 准备源码仓库
 
-与旧版的差异：目录与启用方式没变，但**必须重新 Build**；旧 `.hnmod` 不再可用。
-如果实例里还有其他旧 native mod（例如 jade/jei 的 `.hnmod`），新版启动器无法编译它们，
-需要换成各自的 `.hmod` 版本或先停用。
+1. 新建公开仓库（例如 `https://github.com/<你>/veinsweep`）。
+2. 放入源码与许可证：
+   - `mod/horizon-mod.toml`、`mod/Cargo.toml`、`mod/src/`、`mod/assets/`
+   - 你选择的 `LICENSE`
+   - 建议同时放 `README.md`、`AGENTS.md`、`publish/`（便于 reviewer 对照）
+3. 确认仓库里的源码与 `publish/veinsweep-0.6.1.hmod` 内的源码一致。
 
----
+### 4.2 建 Release
 
-## 4. 提交步骤
+1. 在源码仓库新建 release，tag 任意（如 `v0.6.1`）。
+2. 上传 `publish/veinsweep-0.6.1.hmod`，文件名保持 `veinsweep-0.6.1.hmod`。
+3. 记录下载地址：
+   `https://github.com/<你>/veinsweep/releases/download/v0.6.1/veinsweep-0.6.1.hmod`。
 
-### 方式 A：提交表单
+### 4.3 填条目
 
-1. 把 `mod/`、`publish/`、README 推到公开 GitHub 仓库，记下地址。
-2. 替换 `publish/registry/mods/veinsweep.toml` 里的占位符：
-   `owners`/`authors` 的 `your-github-login`、`source`、`license`；
-   推荐补 `owner_ids = [<你的数字 ID>]`（`gh api users/<login> --jq .id`）。
-3. 打开 <https://playhorizon.dev/mods/submit>，GitHub 登录，上传
-   `publish/veinsweep-0.6.1.hmod`，填写页面信息（id、名称、摘要、描述、作者、
-   许可证、源码、1–3 个类别、≤10 个标签）。
-4. 表单会校验文件、把文件放到 staging、开 PR；审核通过并合并后发布。
+1. 替换 `publish/registry/mods/veinsweep.toml` 里的占位符（见第 3 节）。
+2. 核对 `sha256` 与 `publish/veinsweep-0.6.1.hmod` 一致：
+   `sha256sum publish/veinsweep-0.6.1.hmod`（Windows：`Get-FileHash -Algorithm SHA256 ...`）。
+3. 确认 `versions[0]` 是最新版本（新记录在最上面）。
 
-### 方式 B：手动 PR
+### 4.4 提 PR
 
-1. Fork `horizon-rust/horizon-mods`。
-2. 把 `publish/registry/icons/veinsweep.png` 放到 `icons/veinsweep.png`。
-3. 把 `veinsweep-0.6.1.hmod` 挂到你自己的公开仓库 release，文件名保持
-   `veinsweep-0.6.1.hmod`。
-4. 把 `publish/registry/mods/veinsweep.toml` 放到 `mods/veinsweep.toml`，
-   在 PR 描述里链接 release 文件；审核通过后由维护者 staging。
+1. fork `horizon-rust/horizon-mods`，新建分支。
+2. 加入两个文件：
+   - `mods/veinsweep.toml`（来自 `publish/registry/mods/veinsweep.toml`）
+   - `icons/veinsweep.png`（来自 `publish/registry/icons/veinsweep.png`）
+3. PR 标题如 `Add VeinSweep`；描述里放第 4.2 步的 release 下载地址，并说明：
+   - 这是原生 mod，源码仓库地址；
+   - 固定的 Nightly 与 mixins 版本；
+   - 已在本地用 `native-build` 构建并测试的项目。
+4. 等待 `stage` / `check`；按 reviewer 意见修改。
 
-### 可选：签名
+### 4.5 后续版本
 
-用 minisign 生成密钥，把公钥填进条目的 `key`，把
-`veinsweep-0.6.1.hmod.minisig` 的内容填进 `[[versions]]` 的 `signature`。
-之后每个版本都必须用同一把私钥签名。
+1. 改版本号（清单、Cargo.toml、pack.py、条目、SUBMIT/AGENTS），重新打包与构建。
+2. 新版本上传到**新的** GitHub Release（不要覆盖旧文件）。
+3. 在条目顶部新增 `[[versions]]`，提新 PR；只有 `owners` / `owner_ids` 中的账号可以更新。
+4. 每个 mod 版本仍需人工审核。
 
 ---
 
-## 5. 客观限制
+## 5. 审核、CI、常见失败与下架
 
-- **每个版本都要人工审核**：原生 mod 以玩家权限运行，注册表不会自动合并它的新版本。
-- **固定构建**：`[native]` 固定 `horizon` 与 `mixins` 的完整提交；Horizon 更新后
-  需要重新构建并发新版本，否则新 Nightly 上会构建失败（索引里记为不兼容）。
-- **账号相关字段无法代填**：`owners`、`owner_ids`、`source` 必须由你的 GitHub
-  账号与公开仓库决定。
+- **首次审核**：reviewer 阅读条目、源码和检查报告；原生 mod 的源码另做安全审查，
+  重点看是否有隐藏网络访问、越权、破坏性行为，以及描述是否与实际一致。
+- **CI 检查**：
+  - `stage`：下载 PR 描述里的文件（≤3 个/次，64 MiB/个），核对文件名与 SHA-256 是新记录，
+    运行检查器，放入 `staging`。
+  - `check`：条目与 main 对比、包结构、哈希、签名、候选索引；原生包会核对清单里的
+    `[native]`（game、horizon、mixins）与固定构建。
+- **常见失败原因**：
+  - SHA-256 或文件名与条目不一致；release 链接不是 GitHub release 下载地址；
+  - 条目出现未知键（未知键会被拒绝）；
+  - 描述不足 50 字符、摘要超过 160 字符、类别或标签不合法；
+  - 图标不是正方形、超出 64–1024 px 或超过 256 KiB；
+  - 包内清单的 `id`/`version`/`api`/`[native]` 与条目或固定构建不一致；
+  - 版本号不是新的（已发布版本不能替换）；
+  - 归档 id 需要 `owner_ids` 确认，而 PR 账号不在其中。
+- **下架**：被下架的项目写入 `revoked.toml`；启动器拒绝其文件，并把已安装的副本停用、
+  告知原因。作者可在对应的 issue 里申诉。
 
 ---
 
-## 6. 提交前检查清单
+## 6. 本 mod 的特定风险与说明义务
 
+1. **固定到单个 Nightly**：0.6.1 只对 `Nightly 2026-11-20（0a875da）` +
+   `Horizon Mixins e59da90` 构建与验证。换 Nightly 需要重新构建并发新版本；
+   条目 changelog 与描述里已写明，避免玩家在其他构建上误装。
+2. **专用服务器上不生效**：连锁由客户端按住触发键发起；专用服务器没有客户端按键输入，
+   服务端能加载但不会连锁。条目描述已写明“只在单人游戏或自己主持的局域网世界生效”，
+   不要宣称服务端可用。
+3. **功能重叠**：注册表里已有 Veinminer（旧 native-v1 条目）和 TreeFall 等类似项目。
+   重叠本身不是拒绝理由，但建议在 PR/描述里说明差异：不要求手持工具、同种方块内扩散、
+   黑名单命令、创造模式开关；并确认代码独立、未复制他人代码或素材。
+4. **原生代码审查**：源码必须可读、可复现；不要有隐藏网络访问或与描述不符的行为。
+5. **签名状态**：默认未签名（允许，页面会标注 unsigned）。若希望防止他人冒名发版，
+   生成 minisign 密钥：把公钥填进条目的 `key`，每个版本的 `.minisig` 文本填进该版本的
+   `signature`；此后所有版本都必须用同一把私钥签名，私钥丢失只能请维护者手工更换。
+
+---
+
+## 7. 本地安装与构建（速查）
+
+1. 准备构建：`horizon-launcher prepare --version nightly-2026-11-20-0a875da`。
+2. 构建：`horizon-launcher native-build "<本仓库>\mod" --version nightly-2026-11-20-0a875da --trust-native-code`
+   （`native-build` 接收 **mod 文件夹**，不是实例目录）。
+3. 启动测试时不要显式传 `--version`，否则会覆盖实例已选的原生构建。
+4. 检查：游戏内 Mods 列表应出现 VeinSweep 0.6.1。
+
+---
+
+## 8. 提交前检查清单
+
+- [ ] 公开源码仓库已就绪，`source` 指向它，许可证与 `license` 一致，仓库内有 LICENSE
+- [ ] `authors`、`owners`、`owner_ids` 已替换为真实值，且与提 PR 的账号对应
 - [ ] `publish/veinsweep-0.6.1.hmod` 的 sha256 与条目一致
       （`af5b5d6bfd2ee7a9cc800246083c46e3d8db3b91ff1542496afc8642170ae70c`）
-- [ ] 条目里的 `owners`、`authors`、`source`、`license` 已替换为真实值
-- [ ] 图标是正方形 PNG、64–1024 px、≤256 KiB
-- [ ] 描述 ≥50 字符，类别 1–3 个，标签合法
-- [ ] `[native]` 的 `horizon` / `mixins` 与实际构建一致
-- [ ] 已在 `cargo horizon-mod check` 下通过（或确认 PR 的 CI 通过）
+- [ ] 文件已上传到 GitHub Release，文件名未改
+- [ ] 图标为正方形 PNG、64–1024 px、≤256 KiB，随 PR 放入 `icons/veinsweep.png`
+- [ ] 摘要 ≤160 字符、描述 50–10,000 字符、类别 1–3 个、标签 ≤10 个且小写
+- [ ] `[native]` 的 `horizon` / `mixins` 与实际构建一致（0a875da… / e59da90…）
+- [ ] 0.6.1 的 `[[versions]]` 在条目顶部，`game = "26.3"`
+- [ ] 如有公钥：本版本已签名，`signature` 已填写
+- [ ] 已尽量先跑 `cargo horizon-mod check publish/veinsweep-0.6.1.hmod`
