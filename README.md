@@ -1,61 +1,52 @@
-# VeinSweep —— 连锁挖掘
+# VeinSweep — Chain Mining
 
-按住潜行键（默认，可在 选项 → 控制 → VeinSweep 中改）挖掉一个方块时，
-与它相连的**同种方块**会一起被挖掉。矿脉和原木会整条带走，
-泥土、石头、沙子等普通方块则在附近连成一片不规则的小区域，每次形状都不同。
+**English** | [简体中文](README.zh-CN.md)
 
-连锁只在同种方块内扩散，与手里拿着什么无关：空手、拿木头、拿镐的结果一致。
-所有能挖的方块都能连锁，基岩这类挖不动的方块和箱子、熔炉这类带内容物的方块不参与；
-黑名单里的方块会被跳过。设置页可以随时关闭连锁、调整单次最多挖多少块、
-让掉落直接进背包、保留工具耐久，以及是否在创造模式下连锁。
+Hold the sneak key (by default; change it in Options → Controls → VeinSweep) while you break a block, and every connected block **of the same type** breaks with it. Ore veins and logs come out in one go; dirt, stone and sand tear out as an irregular patch nearby, a different shape each time.
 
-界面支持英语、简体中文和繁体中文，跟随游戏语言切换（缺少对应文本时显示英文）。
+Chain breaking spreads only through the same block type and ignores what you are holding: bare hands, wood or a pickaxe all behave the same. Every breakable block can chain, while unbreakable blocks such as bedrock and blocks with contents such as chests and furnaces are skipped, and anything on the blacklist is ignored. The settings screen can turn chaining off at any time, change how many blocks one break may take, send drops straight to your inventory, stop before a tool breaks, and allow chaining in creative mode.
 
-## 使用
+The interface supports English, Simplified Chinese and Traditional Chinese and follows the game language (English is used when a translation is missing).
 
-1. 空手或手持任意物品（工具、方块都行），**按住触发键**（默认潜行键，即左 Shift，可在
-   选项 → 控制 → VeinSweep 中修改），挖掉一个方块。
-2. 与它相连的**同种方块**（方块 ID 相同，忽略朝向等状态）会按下面的规则一起被挖掉，
-   不会跨到泥土、草方块、沙砾等其他种类：
-   - 矿脉 / 原木：整个 3×3×3 邻域内相接的同种方块，含棱/角相邻，整条带走；
-   - 普通方块：在半径固定为 4 的立方体内随机生成一块连通的区域，每次形状不同。
-   两者都受“最大方块数”硬上限约束。
-3. 创造模式默认**不连锁**（单击只破一块）：在设置里打开“创造模式连锁”后才连锁，
-   且仍要按住触发键；连锁按创造规则不掉落、不耗耐久。旁观者不触发。
+## Usage
 
-保护性规则（始终生效）：
+1. With an empty hand or any item (tool or block), **hold the trigger key** (the sneak key by default, i.e. Left Shift; change it in Options → Controls → VeinSweep) and break a block.
+2. Connected blocks **of the same type** (same block ID, ignoring facing and other states) break with it, following these rules, and never spread into other types such as dirt, grass blocks or gravel:
+   - Ores / logs: every connected same-type block in the 3×3×3 neighbourhood, including edge- and corner-adjacent ones, in one go;
+   - Ordinary blocks: a random connected patch inside a cube of radius 4, a different shape each time.
 
-- 破坏速度小于 0 的方块（基岩等）不参与连锁；
-- 带方块实体的方块（箱子、熔炉等）不参与连锁；
-- 黑名单中的方块不参与连锁，也不会作为连锁起点；
-- 只在同种方块内部扩散：按方块 ID 比较，`dirt` 不会蔓延到 `grass_block` / `coarse_dirt`，
-  `oak_log` 不会蔓延到其他原木，`sand` 不会蔓延到 `gravel`；
-- 不判断手持物：空手、拿木头、拿镐走同一套范围和规则，工具类型与等级都不改变连锁结果；
-  掉落仍按原版规则（例如木镐挖钻石矿会连锁但钻石矿不掉落）。
+   Both are capped by the hard "max blocks" limit.
+3. Creative mode does **not** chain by default (a click breaks one block): enable "Creative chaining" in the settings first, and still hold the trigger key; chaining then follows creative rules — no drops, no durability loss. Spectators never trigger it.
 
-## 设置页（选项 → 模组 → VeinSweep → Config）
+Protective rules (always active):
 
-共 5 项，顺序如下：
+- Blocks with a destroy speed below 0 (bedrock and the like) never chain;
+- Blocks with a block entity (chests, furnaces, etc.) never chain;
+- Blacklisted blocks never chain and are never used as a starting point;
+- Only the same block type spreads: comparing by block ID, `dirt` will not spread into `grass_block` / `coarse_dirt`, `oak_log` will not spread into other logs, `sand` will not spread into `gravel`;
+- Held items are not checked: bare hands, wood or a pickaxe use the same range and rules; tool type and tier do not change the result, and drops still follow vanilla rules (a wooden pickaxe chains diamond ore but the ore does not drop).
 
-| 设置 | 类型 | 默认 |
+## Settings (Options → Mods → VeinSweep → Config)
+
+Five entries, in this order:
+
+| Setting | Type | Default |
 | --- | --- | --- |
-| 连锁破坏 | 开关（总开关） | 开 |
-| 最大方块数 | 滑块（8–256，步长 8） | 32 |
-| 掉落直接入包 | 开关 | 关（世界散落） |
-| 保留工具耐久 | 滑块（0–10） | 0 |
-| 创造模式连锁 | 开关 | 关 |
+| Chain breaking | Toggle (master switch) | On |
+| Max blocks | Slider (8–256, step 8) | 32 |
+| Drops to inventory | Toggle | Off (scatter in the world) |
+| Preserve tool durability | Slider (0–10) | 0 |
+| Creative chaining | Toggle | Off |
 
-普通方块的扩散半径固定为 4，不再出现在设置页（矿脉/原木仍固定 3×3×3 邻域）。
+The spread radius for ordinary blocks is fixed at 4 and no longer appears in the settings (ores and logs still use the fixed 3×3×3 neighbourhood).
 
-触发键不在设置页，而在 **选项 → 控制 → VeinSweep → 连锁触发键**，默认潜行键（左 Shift）；
-支持键盘键与鼠标键。关闭“连锁破坏”后，触发键与其余设置都不再生效。
+The trigger key is not on the settings screen but in **Options → Controls → VeinSweep → Chain trigger key**, defaulting to the sneak key (Left Shift); keyboard and mouse buttons are supported. With "Chain breaking" off, neither the trigger key nor the other settings have any effect.
 
-“保留工具耐久”表示剩余耐久低于该值时停止连锁，避免把工具用爆；只对带耐久的
-工具生效，空手或拿方块/食物不会触发它。
+"Preserve tool durability" stops chaining when the remaining durability falls below that value, so a tool does not break; it applies only to tools with durability — bare hands, blocks or food never trigger it.
 
-## 黑名单
+## Blacklist
 
-全部在游戏内完成，不需要手改文件：
+Everything happens in game; no need to edit files by hand:
 
 ```
 /veinsweep blacklist add minecraft:dirt
@@ -64,11 +55,10 @@
 /veinsweep blacklist clear
 ```
 
-- `add` / `remove` 的方块参数支持 Tab 补全（资源 ID）。
-- 黑名单按**方块 ID**匹配，该方块的任何状态都不参与连锁。
-- 保存位置：`<游戏目录>/horizon-mod-data/veinsweep/blacklist.txt`，每行一个 ID，
-  重启后仍然有效；也允许多个客户端共享同一游戏目录时读取它。
+- The block argument of `add` / `remove` supports Tab completion (resource ID).
+- The blacklist matches by **block ID**; no state of that block can chain.
+- Saved to `<game directory>/horizon-mod-data/veinsweep/blacklist.txt`, one ID per line, and it survives restarts; clients that share the same game directory can read it too.
 
 ---
 
-开发、构建、打包、校验与发布说明见 [AGENTS.md](AGENTS.md)。
+Development, build, packaging, verification and publishing notes are in [AGENTS.md](AGENTS.md).

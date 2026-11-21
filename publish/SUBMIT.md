@@ -114,7 +114,7 @@
 2. 仓库已包含源码与 MIT LICENSE：
    - `mod/horizon-mod.toml`、`mod/Cargo.toml`、`mod/src/`、`mod/assets/`
    - `LICENSE`（MIT，2026，署名 ChangGengCN）
-   - `README.md`、`AGENTS.md`、`publish/`（便于 reviewer 对照）
+   - `README.md`、`README.zh-CN.md`、`AGENTS.md`、`publish/`（便于 reviewer 对照）
 3. 确认仓库里的源码与 `publish/veinsweep-0.6.1.hmod` 内的源码一致。
 
 ### 4.2 建 Release

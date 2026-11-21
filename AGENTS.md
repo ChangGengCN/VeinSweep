@@ -1,7 +1,8 @@
 # VeinSweep 开发与发布说明
 
 本文件面向开发者与代理，收录构建、打包、版本维护、校验、发布等工程信息。
-面向玩家的功能说明与使用步骤在 [README.md](README.md)，两处不重复。
+面向玩家的功能说明与使用步骤在 [README.md](README.md)（英文，仓库默认）与
+[README.zh-CN.md](README.zh-CN.md)（简体中文），两处不重复。
 
 ## 1. 工程形态与目录
 
@@ -29,7 +30,8 @@ VeinSweep/
 │   ├── veinsweep-0.6.1.hmod   # 分发包（构建产物，不入库）
 │   ├── SUBMIT.md              # 上架说明：包格式、注册表、提交流程
 │   └── registry/              # 注册表条目与图标
-├── README.md                  # 项目描述与玩家使用说明
+├── README.md                  # 项目描述与玩家使用说明（英文，仓库默认）
+├── README.zh-CN.md            # 简体中文版 README，与英文版对应
 └── AGENTS.md                  # 本文件
 ```
 
