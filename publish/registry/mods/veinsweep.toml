@@ -2,12 +2,10 @@
 # 目标仓库：https://github.com/horizon-rust/horizon-mods
 # 放到：mods/veinsweep.toml；图标放到：icons/veinsweep.png
 #
-# 提交前必须替换：
-#   authors / owners 的占位符 → 你的显示名 / GitHub 登录名
-#   owner_ids = [0]            → 与 owners 一一对应的 GitHub 数字 ID
-#                                （gh api users/<login> --jq .id）
-#   source 的 your-github-login/veinsweep → 你的公开源码仓库
-#   license = "MIT"            → 源码仓库实际使用的许可证（必须是 SPDX 名）
+# 作者与 owner 已回填：ChangGengCN（GitHub 数字 ID 41566656）。
+# 源码仓库：https://github.com/ChangGengCN/VeinSweep（公开，MIT）。
+# 提交 PR 前仍需：把 veinsweep-0.6.1.hmod 上传到该仓库的 GitHub Release，
+# 并在 PR 描述里给出 release 下载地址。
 # 可选：签名。生成 minisign 密钥后，把公钥（RW… 开头）填进 key，
 # 并在每个版本的 signature 里放 .minisig 文本；之后每个新版本都必须签名。
 id = "veinsweep"
@@ -40,11 +38,11 @@ VeinSweep 是一个连锁挖掘模组：按住潜行键（默认，可在 选项
 - **适用范围**：连锁由客户端按住触发键发起，只在单人游戏或自己主持的局域网世界里生效；
   专用服务器上没有客户端的按键输入，连锁不会触发（服务端仍可正常加载）。
 """
-authors = ["your-github-login"]
-owners = ["your-github-login"]
-owner_ids = [0]
+authors = ["ChangGengCN"]
+owners = ["ChangGengCN"]
+owner_ids = [41566656]
 license = "MIT"
-source = "https://github.com/your-github-login/veinsweep"
+source = "https://github.com/ChangGengCN/VeinSweep"
 icon = "icons/veinsweep.png"
 categories = ["game-mechanics", "utility"]
 tags = ["vein-mining", "chain-mining", "mining", "blacklist"]

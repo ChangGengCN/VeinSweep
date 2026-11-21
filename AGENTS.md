@@ -160,8 +160,9 @@ python publish/pack.py
 
 完整的包格式、注册表结构与提交流程见 [publish/SUBMIT.md](publish/SUBMIT.md)。
 
-- 注册表条目 `publish/registry/mods/veinsweep.toml` 中 `owners`、`authors`、
-  `source`、`license` 是占位符，提交前替换为真实值；
+- 注册表条目 `publish/registry/mods/veinsweep.toml` 的 `authors` / `owners` /
+  `owner_ids` / `source` / `license` 已回填（ChangGengCN，41566656，
+  `https://github.com/ChangGengCN/VeinSweep`，MIT）；
 - 每个新版本都要重新构建、重新打包、更新 sha256，并重新走人工审核；
 - 原生 mod 以玩家权限运行，注册表不会自动合并新版本；
 - 发布物固定到一个 Horizon 提交，新 Nightly 上需重新构建并发版。

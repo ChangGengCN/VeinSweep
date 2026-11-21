@@ -20,8 +20,8 @@
 - 每个新项目、每个 mod 版本都要**人工审核**（原生代码以玩家权限运行，还会做源码安全审查）。
 - 文件以 SHA-256 固定；已发布的文件永不替换，升级只能发新版本。
 - 签名**可选但推荐**；一旦条目里填了公钥，之后每个版本都必须用同一把私钥签名。
-- 本项目 0.6.1 的包与条目草稿已就绪；仍需你本人完成：公开源码仓库、许可证、
-  GitHub Release、`owner_ids`、以及 PR。
+- 本项目 0.6.1 的包与条目草稿已就绪；公开源码仓库（含 MIT LICENSE）与 `owner_ids`
+  已就绪；仍需你本人完成：GitHub Release 上传与向注册表的 PR。
 
 ---
 
@@ -39,7 +39,7 @@
    - `mods/veinsweep.toml`（项目页 + 新 `[[versions]]` 记录）
    - `icons/veinsweep.png`（首次提交时）
 3. PR 描述里给出文件的 release 下载地址：
-   `https://github.com/<owner>/<repo>/releases/download/<tag>/veinsweep-0.6.1.hmod`
+   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.1/veinsweep-0.6.1.hmod`
 4. `stage` 工作流下载该文件，核对文件名与 SHA-256 是新记录，运行检查器，
    把文件放进 `staging` 预发布（每次最多 3 个文件、每个 ≤64 MiB）。
 5. `check` 工作流对比条目与 main、校验包结构、哈希与签名，并构建候选索引。
@@ -57,10 +57,10 @@
 | `kind` | 带 `[native]` 的 `.hmod` 用 `native-mod` | `native-mod` ✔ |
 | `name` / `summary` | 名称；摘要 ≤160 字符，列表用 | `VeinSweep`；摘要 96 字符 ✔ |
 | `description` | Markdown，去空白后 50–10,000 字符 | 852 字符 ✔ |
-| `authors` / `owners` | 显示用作者；可发版的 GitHub 登录名 | **占位符**，需替换 |
-| `owner_ids` | 与 `owners` 对应的 GitHub 数字 ID（owner 更新与归档 id 确认要用） | **占位符 `[0]`**，需替换 |
-| `license` | SPDX 表达式；必须与源码仓库一致 | 暂写 `MIT`，需你确认并在仓库放 LICENSE |
-| `source` | 源码的 `https://` 地址，公开可读 | **占位符**，需你的公开仓库 |
+| `authors` / `owners` | 显示用作者；可发版的 GitHub 登录名 | `ChangGengCN` ✔ |
+| `owner_ids` | 与 `owners` 对应的 GitHub 数字 ID（owner 更新与归档 id 确认要用） | `41566656` ✔ |
+| `license` | SPDX 表达式；必须与源码仓库一致 | `MIT`，仓库已放 LICENSE ✔ |
+| `source` | 源码的 `https://` 地址，公开可读 | `https://github.com/ChangGengCN/VeinSweep` ✔ |
 | `icon` | `icons/<id>.png`：正方形 PNG，64–1024 px，≤256 KiB | `publish/registry/icons/veinsweep.png`：512×512，39,918 字节 ✔（PR 时放入 `icons/`） |
 | `categories` | 1–3 个，取自该 kind 的类别表 | `game-mechanics`、`utility`（与已上架 Veinminer 的 “Game mechanics / Utility” 一致）✔ |
 | `tags` | ≤10 个、小写 | 4 个，均小写 ✔ |
@@ -68,14 +68,14 @@
 | `screenshots` | 可选，≤8 张，PNG/JPEG | 无（可选，不阻塞） |
 | `[[versions]]` | `version`、`published`、`game`、`file`、`sha256`、`changelog`；新记录在最上面 | 0.6.1 ✔ |
 | 文件 | 扩展名匹配 kind；≤64 MiB；名字与条目一致 | `veinsweep-0.6.1.hmod`，36,714 字节 ✔ |
-| 源码公开仓库 | 必须有，许可证允许分发；reviewer 要读 | **缺**（当前目录不是 git 仓库） |
+| 源码公开仓库 | 必须有，许可证允许分发；reviewer 要读 | 已推送，公开可读 ✔ |
 | GitHub Release 附件 | 文件名必须与条目给出的名字一致 | **缺**（需你上传） |
 | `cargo horizon-mod check` | 提交前自行跑一遍（CI 也会跑） | 本机未安装该子命令，未跑（不阻塞 PR，但建议先跑） |
 | 构建证明 | 原生 mod 固定到确切构建；reviewer 会看 | `native-build` 已产出 `native-0a875da-5d2421133c57`，可复现 |
 
 ---
 
-## 3. 当前产物、占位符与必须你亲自做的事
+## 3. 当前产物、已回填字段与必须你亲自做的事
 
 `publish/` 下已有：
 
@@ -86,35 +86,35 @@
 | `publish/registry/icons/veinsweep.png` | 正方形图标（512×512） |
 | `publish/pack.py` | 重新打包与结构校验（`python publish/pack.py`） |
 
-条目里的占位符：
+条目里的身份与来源字段已回填：
 
-- `authors = ["your-github-login"]` → 你的显示名（可多个）。
-- `owners = ["your-github-login"]` → 你的 GitHub 登录名。
-- `owner_ids = [0]` → 对应的 GitHub 数字 ID：`gh api users/<login> --jq .id`。
-- `source = "https://github.com/your-github-login/veinsweep"` → 你的公开源码仓库。
-- `license = "MIT"` → 你选择的 SPDX 许可证，且仓库里要有对应的 LICENSE 文件。
+- `authors = ["ChangGengCN"]`、`owners = ["ChangGengCN"]`
+- `owner_ids = [41566656]`（`https://api.github.com/users/ChangGengCN` 取到的数字 ID）
+- `source = "https://github.com/ChangGengCN/VeinSweep"`
+- `license = "MIT"`，仓库根目录已有配套的 LICENSE 文件
+
+注意：本地提交身份是 `changgeng <18355166959@163.com>`（GitHub 数字 ID 21967815），
+与 `ChangGengCN`（41566656）不是同一个账号；注册表以 `owners` / `owner_ids` 为准。
 
 只能由你完成的事项：
 
-- **GitHub 账号与认证**：fork、提 PR、上传 release 都需要你自己的账号。
-- **公开源码仓库**：把 `mod/`（至少 `horizon-mod.toml`、`Cargo.toml`、`src/`、`assets/`）
-  推到一个公开仓库；页面上的 `source` 必须指向它，且与发布文件对应。
-- **许可证选择**：MIT / Apache-2.0 / GPL 等均可；不允许“保留所有权利”。
-- **GitHub Release**：把 `veinsweep-0.6.1.hmod` 作为附件上传，文件名不要改。
-- **`owner_ids`**：必须与 `owners` 对应，否则 owner 更新与归档 id 确认会失败。
+- **GitHub Release**：把 `veinsweep-0.6.1.hmod` 作为附件上传到公开仓库，文件名不要改。
+- **向 `horizon-rust/horizon-mods` 提 PR**：fork、提交条目与图标、写 PR 描述。
 - **（可选）签名**：决定是否生成 minisign 密钥并固定公钥。
+
+已完成、无需再处理：公开源码仓库、许可证、`authors` / `owners` / `owner_ids`、`source`。
 
 ---
 
 ## 4. 可直接照做的步骤
 
-### 4.1 准备源码仓库
+### 4.1 准备源码仓库（已完成）
 
-1. 新建公开仓库（例如 `https://github.com/<你>/veinsweep`）。
-2. 放入源码与许可证：
+1. 公开仓库已建立并推送：`https://github.com/ChangGengCN/VeinSweep`，默认分支 `main`。
+2. 仓库已包含源码与 MIT LICENSE：
    - `mod/horizon-mod.toml`、`mod/Cargo.toml`、`mod/src/`、`mod/assets/`
-   - 你选择的 `LICENSE`
-   - 建议同时放 `README.md`、`AGENTS.md`、`publish/`（便于 reviewer 对照）
+   - `LICENSE`（MIT，2026，署名 ChangGengCN）
+   - `README.md`、`AGENTS.md`、`publish/`（便于 reviewer 对照）
 3. 确认仓库里的源码与 `publish/veinsweep-0.6.1.hmod` 内的源码一致。
 
 ### 4.2 建 Release
@@ -122,11 +122,12 @@
 1. 在源码仓库新建 release，tag 任意（如 `v0.6.1`）。
 2. 上传 `publish/veinsweep-0.6.1.hmod`，文件名保持 `veinsweep-0.6.1.hmod`。
 3. 记录下载地址：
-   `https://github.com/<你>/veinsweep/releases/download/v0.6.1/veinsweep-0.6.1.hmod`。
+   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.1/veinsweep-0.6.1.hmod`。
 
 ### 4.3 填条目
 
-1. 替换 `publish/registry/mods/veinsweep.toml` 里的占位符（见第 3 节）。
+1. 核对 `publish/registry/mods/veinsweep.toml` 里的 `authors` / `owners` / `owner_ids` /
+   `source` 已是真实值（见第 3 节）。
 2. 核对 `sha256` 与 `publish/veinsweep-0.6.1.hmod` 一致：
    `sha256sum publish/veinsweep-0.6.1.hmod`（Windows：`Get-FileHash -Algorithm SHA256 ...`）。
 3. 确认 `versions[0]` 是最新版本（新记录在最上面）。
@@ -204,8 +205,8 @@
 
 ## 8. 提交前检查清单
 
-- [ ] 公开源码仓库已就绪，`source` 指向它，许可证与 `license` 一致，仓库内有 LICENSE
-- [ ] `authors`、`owners`、`owner_ids` 已替换为真实值，且与提 PR 的账号对应
+- [x] 公开源码仓库已就绪，`source` 指向它，许可证与 `license` 一致，仓库内有 LICENSE
+- [x] `authors`、`owners`、`owner_ids` 已替换为真实值，且与提 PR 的账号对应
 - [ ] `publish/veinsweep-0.6.1.hmod` 的 sha256 与条目一致
       （`af5b5d6bfd2ee7a9cc800246083c46e3d8db3b91ff1542496afc8642170ae70c`）
 - [ ] 文件已上传到 GitHub Release，文件名未改
