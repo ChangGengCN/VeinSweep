@@ -11,102 +11,6 @@
 
 界面支持英语、简体中文和繁体中文，跟随游戏语言切换（缺少对应文本时显示英文）。
 
-## 版本行为说明
-
-0.3.0 起不再有“基础方块”白名单：**所有可破坏方块**都能连锁。只保留保护性判断
-（不能破坏的方块、带方块实体的方块、黑名单）。0.5.0 起连锁只由**按住触发键 + 破坏方块**
-触发，与手里拿着什么无关：空手、拿木头、拿镐的行为完全一致。
-
-0.5.0 新增**连锁破坏总开关**（默认开）：关闭后连锁完全停用，挖方块只破坏手动那一块。
-触发键是注册到 选项 → 控制 → VeinSweep 的 mod 按键映射，0.6.0 起默认绑到潜行键
-（左 Shift），可改成任意键盘键或鼠标键；没有无需按键就生效的模式。
-
-0.6.0 起普通方块的扩散范围固定，不再作为设置项；设置页因此少一项。
-
-“同种”按**方块 ID**判定（忽略朝向等方块状态）：`oak_log` 的不同朝向互相连锁，
-但 `oak_log` 不会蔓延到 `birch_log`，`dirt` 不会蔓延到 `grass_block` 或 `coarse_dirt`，
-`sand` 不会蔓延到 `gravel`；同一族但不同 ID 的方块默认互不蔓延。
-
-0.4.0 起扩散分两类：
-
-- **矿脉 / 原木**（`*_ore`、远古残骸、`*_log`、`*_wood`、`*_stem`、`*_hyphae`）：
-  连通关系固定计算，以起点为中心的整个 3×3×3 邻域内相接的同种方块都参与，
-  六面相邻与棱/角相邻都算；只靠棱或角相接的矿脉也能整条带走。
-- **泥土、石头、沙子等普通方块**：在以起点为中心的立方体范围内**伪随机**挑选取走的方块，
-  每次形状都不同、没有固定规律；范围内按六面连通生长，保证挖出的是一整块连着的区域。
-  范围固定为 4（见 `SCATTER_RADIUS`）。
-
-> 想发布到 Horizon 官方模组集：见 [publish/SUBMIT.md](publish/SUBMIT.md)。
-
-## 类型与格式（2026-11-18 的新规范）
-
-Horizon 在 2026-11-15 合并了新 mod API。本项目已从旧的 native mixin 格式
-（`.hnmod` + `horizon-native.json` + `horizon-mixin.toml`）迁移到新格式：
-
-- 分发包是 **`.hmod`**（zip，根目录 `horizon-mod.toml`）；
-- 原生 mod 带根 `Cargo.toml`、`Cargo.lock`（可选）与 `src/`，依赖
-  `.horizon/sdk/api/crates/horizon-mod-api`；
-- 由启动器用固定工具链针对**预编译游戏**编译，不再整份重编游戏；
-- 钩子实现为 `mod_api::Hooks` 的方法，本项目实现
-  `break_block`（服务端，对应 NeoForge 的 `BreakBlockEvent`）、
-  `client_tick_post`（客户端每 tick 读触发键）、`register`（设置项与按键映射）、
-  `register_commands` / `run_mod_command`（黑名单命令）。
-
-固定构建：Horizon `0a875da91dbb0fdcb7ba8c42c11341aa229af51a`
-（Nightly 2026-11-20），horizon-mixins `e59da9094f0c2fdda6c627fe9eff22dec6a906f0`。
-
-## 项目结构
-
-```
-VeinSweep/
-├── mod/                      # 构建与打包的 mod 工程
-│   ├── horizon-mod.toml      # 清单：id、version、api、[native] 固定构建
-│   ├── Cargo.toml
-│   ├── src/lib.rs            # 钩子、设置、命令、黑名单
-│   ├── assets/veinsweep/lang # 设置项与反馈的英/简中/繁中文本
-│   └── .horizon/sdk/         # 固定构建的 SDK（不入库、不入包）
-├── publish/
-│   ├── pack.py               # 生成 .hmod 并做结构校验
-│   ├── veinsweep-0.6.0.hmod  # 分发包（构建产物，不入库）
-│   ├── SUBMIT.md             # 发布说明
-│   └── registry/             # 注册表条目与图标
-└── README.md
-```
-
-`.horizon/`、`target/`、`*.hmod` 都在 `.gitignore` 里。
-
-## 构建与安装
-
-原生 mod 必须在本机编译（启动器用自带的 Rust 工具链和固定 SDK）。
-
-### 启动器界面
-
-1. 把 `publish/veinsweep-0.6.0.hmod`（或整个 `mod/` 文件夹）放进实例的
-   `horizon-native-mods/`（游戏里 **选项 → 模组 → Open Mod Folder** 打开的就是这里）。
-2. 在启动器的 Mods 页把 VeinSweep 打开（等价于 `horizon-mods.txt` 里写
-   `mod.veinsweep:true`）。
-3. 点 Build（或 Play，启动器会先构建）。
-
-### 命令行
-
-```powershell
-# 构建到默认实例
-& "$env:LOCALAPPDATA\Programs\Horizon Launcher\horizon-launcher.exe" native-build `
-    "e:\Project\Game\Minecraft\Horizon\VeinSweep\mod" --trust-native-code
-
-# 指定实例与版本
-& "$env:LOCALAPPDATA\Programs\Horizon Launcher\horizon-launcher.exe" native-build `
-    "e:\Project\Game\Minecraft\Horizon\VeinSweep\mod" `
-    --instance "My Instance" --version nightly-2026-11-20-0a875da --trust-native-code
-```
-
-- `native-build` 需要先把该 Nightly 准备好（`horizon-launcher prepare --version ...`）。
-- `--trust-native-code` 表示允许原生代码：它和普通程序一样拥有你的用户权限，没有沙箱。
-- 构建成功后实例会选用一个新的 `native-<commit>-<hash>` 构建。
-
-想自己跑 `cargo check`：先把固定构建的 SDK 放进 `mod/.horizon/sdk/`
-（`horizon-mod-api = { path = ".horizon/sdk/api/crates/horizon-mod-api" }` 是唯一允许的写法）。
-
 ## 使用
 
 1. 空手或手持任意物品（工具、方块都行），**按住触发键**（默认潜行键，即左 Shift，可在
@@ -165,8 +69,6 @@ VeinSweep/
 - 保存位置：`<游戏目录>/horizon-mod-data/veinsweep/blacklist.txt`，每行一个 ID，
   重启后仍然有效；也允许多个客户端共享同一游戏目录时读取它。
 
-## 文件
+---
 
-- 分发包：`publish/veinsweep-0.6.0.hmod`（36419 字节，sha256
-  `1c05aa38c21d6738501e465c4026619e04b6983ab2a85dc64f384a3580bcb7fe`）
-- 界面文本：`assets/veinsweep/lang/zh_cn.json`、`en_us.json`、`zh_tw.json`
+开发、构建、打包、校验与发布说明见 [AGENTS.md](AGENTS.md)。

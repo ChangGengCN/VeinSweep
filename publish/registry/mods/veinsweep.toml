@@ -45,9 +45,9 @@ categories = ["game-mechanics", "utility"]
 tags = ["vein-mining", "chain-mining", "mining", "blacklist"]
 
 [[versions]]
-version = "0.6.0"
+version = "0.6.1"
 published = "2026-11-21"
 game = "26.3"
-file = "veinsweep-0.6.0.hmod"
-sha256 = "1c05aa38c21d6738501e465c4026619e04b6983ab2a85dc64f384a3580bcb7fe"
-changelog = "默认触发键改为潜行键（左 Shift），仍可在 选项 → 控制 → VeinSweep 中改键，按住才连锁。“随机扩散半径”不再作为设置项，固定为合适的大小，设置页因此减少一项。模组简介改为只说明用途。界面文本新增英文与繁体中文，跟随游戏语言切换，缺省时回退到英文。"
+file = "veinsweep-0.6.1.hmod"
+sha256 = "af5b5d6bfd2ee7a9cc800246083c46e3d8db3b91ff1542496afc8642170ae70c"
+changelog = "模组介绍改为简体中文在上、英文在下的组合文本，在游戏内模组列表里直接显示两种语言；界面设置、提示与命令反馈的语言切换不受影响。游戏内行为与 0.6.0 相同。"
