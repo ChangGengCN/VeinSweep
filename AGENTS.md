@@ -28,7 +28,7 @@ VeinSweep/
 │   └── .horizon/sdk/          # 固定构建的 SDK（不入库、不入包）
 ├── publish/
 │   ├── pack.py                # 生成 .hmod 并做结构校验
-│   ├── veinsweep-0.6.2.hmod   # 分发包（构建产物，不入库）
+│   ├── veinsweep-0.6.3.hmod   # 分发包（构建产物，不入库）
 │   ├── SUBMIT.md              # 上架说明：包格式、注册表、提交流程
 │   └── registry/              # 注册表条目与图标
 ├── README.md                  # 项目描述与玩家使用说明（英文，仓库默认）
@@ -40,8 +40,8 @@ VeinSweep/
 
 ## 2. 固定构建与版本维护
 
-固定构建：Horizon `0a875da91dbb0fdcb7ba8c42c11341aa229af51a`
-（Nightly 2026-11-20），horizon-mixins `e59da9094f0c2fdda6c627fe9eff22dec6a906f0`。
+固定构建：Horizon `f037744a79f9982c47876f49c5a3067279f88706`
+（Nightly 2026-11-21），horizon-mixins `e59da9094f0c2fdda6c627fe9eff22dec6a906f0`。
 
 发版时版本号与哈希分散在多处，必须同步：
 
@@ -56,7 +56,7 @@ VeinSweep/
 
 - 启动器每次构建会产出 `native-<commit>-<hash>` 目录；源码变化可能生成新 tag。
   tag 用于实测记录，不参与打包；提交与报告中写最终一次构建的 tag
-  （0.6.2 为 `native-0a875da-056ad3f32623`）。
+  （0.6.3 为 `native-f037744-f12e25f98ff5`）。
 - 升级固定构建：同时改 `horizon-mod.toml` 的 `[native] horizon` / `mixins`、
   `pack.py` 的 `HORIZON` / `MIXINS`，重新 `native-build` 并跑完整实测，
   然后发新版本；旧版本在新 Nightly 上会构建失败，属预期。
@@ -95,7 +95,7 @@ VeinSweep/
 
 ### 启动器界面
 
-1. 把 `publish/veinsweep-0.6.2.hmod`（或整个 `mod/` 文件夹）放进实例的
+1. 把 `publish/veinsweep-0.6.3.hmod`（或整个 `mod/` 文件夹）放进实例的
    `horizon-native-mods/`（游戏里 **选项 → 模组 → Open Mod Folder** 打开的就是这里）。
 2. 在启动器的 Mods 页把 VeinSweep 打开（等价于 `horizon-mods.txt` 里写
    `mod.veinsweep:true`）。
@@ -111,7 +111,7 @@ VeinSweep/
 # 指定实例与版本
 & "$env:LOCALAPPDATA\Programs\Horizon Launcher\horizon-launcher.exe" native-build `
     "e:\Project\Game\Minecraft\Horizon\VeinSweep\mod" `
-    --instance "My Instance" --version nightly-2026-11-20-0a875da --trust-native-code
+    --instance "My Instance" --version nightly-2026-11-21-f037744 --trust-native-code
 ```
 
 - `native-build` 需要先把该 Nightly 准备好（`horizon-launcher prepare --version ...`）。
@@ -140,8 +140,8 @@ python publish/pack.py
 输出会打印 `size`、`sha256`、`files` 与 `bundle check: OK`；把哈希同步到注册表条目、
 `SUBMIT.md` 和本文件（README 不再放发布信息）。
 
-当前分发包：`publish/veinsweep-0.6.2.hmod`，37823 字节，sha256
-`b81034c3eafbd964e85395e7a4d3388e17ebd6dc5ec901ecd048f3df8208bd42`，
+当前分发包：`publish/veinsweep-0.6.3.hmod`，37826 字节，sha256
+`ef3fd5cac362a040abe24fc6bcff2bb8ff07d06fb53e67bba46234f3953528f1`，
 包内 8 个文件（含 `LICENSE`）。
 
 ## 6. 校验与实测要求
@@ -198,3 +198,6 @@ python publish/pack.py
 - 0.6.2 包内加入 MIT LICENSE；黑名单 `add`/`remove`/`clear` 改为权限等级 2
   （`list` 仍公开）；连锁中途工具损坏时立即停止；清单作者统一为
   `ChangGengCN`；注册表摘要与描述改为中英双语。
+- 0.6.3 固定构建更新为 Nightly 2026-11-21（`f037744`），mixins `e59da90` 不变；
+  功能与设置不变，已在新构建上重新编译并在生存模式复测连锁、同种方块扩散、
+  黑名单、上限与总开关。

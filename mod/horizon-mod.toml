@@ -1,6 +1,6 @@
 id = "veinsweep"
 name = "VeinSweep"
-version = "0.6.2"
+version = "0.6.3"
 description = """
 按住潜行键（默认，可在控制中改）挖掉一个方块时，与它相连的同种方块会一起被挖掉。矿脉和原木整条带走，泥土、石头等普通方块在附近连成不规则的一片。只在同种方块内扩散，与手里拿什么无关；工具中途损坏会立即停止，可以随时关闭。
 
@@ -14,5 +14,5 @@ capabilities = ["registries"]
 
 [native]
 game = "26.3"
-horizon = "0a875da91dbb0fdcb7ba8c42c11341aa229af51a"
+horizon = "f037744a79f9982c47876f49c5a3067279f88706"
 mixins = "e59da9094f0c2fdda6c627fe9eff22dec6a906f0"
