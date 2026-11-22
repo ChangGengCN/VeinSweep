@@ -1,5 +1,5 @@
 {
-  "veinsweep.description": "Hold the sneak key (default; rebindable in Controls) while breaking a block to also break the matching blocks connected to it. Ores and logs come out as a whole vein, while dirt, stone and similar blocks break in an irregular patch nearby. It only spreads through the same block type, works with any held item, and can be switched off at any time.",
+  "veinsweep.description": "Hold the sneak key (default; rebindable in Controls) while breaking a block to also break the matching blocks connected to it. Ores and logs come out as a whole vein, while dirt, stone and similar blocks break in an irregular patch nearby. It only spreads through the same block type, works with any held item, stops at once if the tool breaks mid-chain, and can be switched off at any time.",
   "veinsweep.setting.enabled": "Chain mining",
   "veinsweep.setting.enabled.tooltip": "Off: chain mining is fully disabled and breaking a block destroys only that block",
   "veinsweep.setting.limit": "Maximum blocks",

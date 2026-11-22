@@ -154,14 +154,16 @@ impl Hooks for VeinSweep {
     }
 
     fn register_commands(&self, _host: &mut dyn ServerHost, event: &mut RegisterCommandsEvent<'_>) {
-        event.commands.push(Command::new(
+        event.commands.push(Command::op(
             "veinsweep blacklist add <block:resource:minecraft:block>",
+            2,
         ));
-        event.commands.push(Command::new(
+        event.commands.push(Command::op(
             "veinsweep blacklist remove <block:resource:minecraft:block>",
+            2,
         ));
         event.commands.push(Command::new("veinsweep blacklist list"));
-        event.commands.push(Command::new("veinsweep blacklist clear"));
+        event.commands.push(Command::op("veinsweep blacklist clear", 2));
     }
 
     fn run_mod_command(
@@ -244,6 +246,8 @@ impl Hooks for VeinSweep {
         let limit = setting_number(host, "limit", 32.0).clamp(LIMIT_MIN, LIMIT_MAX) as u32;
         let keep = setting_number(host, "keep", 0.0).clamp(0.0, 10.0) as u32;
         let into_inventory = setting_bool(host, "inventory", false);
+        // 连锁开始时的主手物品：中途工具损坏（空手或换成别的物品）就停止连锁。
+        let start_item = hand_stack(host, player).map(|stack| stack.item());
         let Some(level) = player.level(host) else {
             return Flow::Continue;
         };
@@ -260,6 +264,7 @@ impl Hooks for VeinSweep {
                 &blacklist,
                 limit,
                 keep,
+                start_item,
                 into_inventory,
             );
         } else {
@@ -274,6 +279,7 @@ impl Hooks for VeinSweep {
                 &blacklist,
                 limit,
                 keep,
+                start_item,
                 into_inventory,
                 SCATTER_RADIUS,
             );
@@ -338,6 +344,7 @@ fn chain_vein(
     blacklist: &HashSet<String>,
     limit: u32,
     keep: u32,
+    start_item: Option<mod_api::ItemKey>,
     into_inventory: bool,
 ) {
     let mut seen: HashSet<[i32; 3]> = HashSet::new();
@@ -359,7 +366,7 @@ fn chain_vein(
             if !seen.insert(next) || !can_chain(host, level, next, origin, blacklist) {
                 continue;
             }
-            if !durability_left(host, player, keep) {
+            if !durability_left(host, player, keep, start_item) {
                 return;
             }
             if player.destroy_block(host, next, into_inventory) {
@@ -383,6 +390,7 @@ fn chain_scatter(
     blacklist: &HashSet<String>,
     limit: u32,
     keep: u32,
+    start_item: Option<mod_api::ItemKey>,
     into_inventory: bool,
     radius: i32,
 ) {
@@ -418,7 +426,7 @@ fn chain_scatter(
         if !can_chain(host, level, next, origin, blacklist) {
             continue;
         }
-        if !durability_left(host, player, keep) {
+        if !durability_left(host, player, keep, start_item) {
             return;
         }
         if player.destroy_block(host, next, into_inventory) {
@@ -564,12 +572,22 @@ fn hand_stack(host: &dyn Host, player: mod_api::PlayerRef) -> Option<mod_api::It
 }
 
 /// 剩余耐久是否仍高于保留值；没有耐久概念的物品（或空手）直接放行。
+///
+/// `start_item` 是连锁开始时的主手物品。若开始时手里有物品、中途却变成空手或
+/// 换成了别的物品（工具损坏、被替换），立即停止连锁，避免徒手继续扩散。
 fn durability_left(
     host: &dyn Host,
     player: mod_api::PlayerRef,
     keep: u32,
+    start_item: Option<mod_api::ItemKey>,
 ) -> bool {
-    let Some(stack) = hand_stack(host, player) else {
+    let stack = hand_stack(host, player);
+    match (start_item, stack.as_ref()) {
+        (Some(_), None) => return false,
+        (Some(start), Some(stack)) if stack.item() != start => return false,
+        _ => {}
+    }
+    let Some(stack) = stack else {
         return true;
     };
     // 方块、食物等没有 `minecraft:max_damage`：宿主可能报成 0，

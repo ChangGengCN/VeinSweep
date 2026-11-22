@@ -42,7 +42,7 @@ The spread radius for ordinary blocks is fixed at 4 and no longer appears in the
 
 The trigger key is not on the settings screen but in **Options → Controls → VeinSweep → Chain trigger key**, defaulting to the sneak key (Left Shift); keyboard and mouse buttons are supported. With "Chain breaking" off, neither the trigger key nor the other settings have any effect.
 
-"Preserve tool durability" stops chaining when the remaining durability falls below that value, so a tool does not break; it applies only to tools with durability — bare hands, blocks or food never trigger it.
+"Preserve tool durability" stops chaining when the remaining durability falls below that value, so a tool does not break; it applies only to tools with durability — bare hands, blocks or food never trigger it. If the tool does break mid-chain, chaining stops at once instead of continuing bare-handed.
 
 ## Blacklist
 

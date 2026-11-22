@@ -20,8 +20,9 @@
 - 每个新项目、每个 mod 版本都要**人工审核**（原生代码以玩家权限运行，还会做源码安全审查）。
 - 文件以 SHA-256 固定；已发布的文件永不替换，升级只能发新版本。
 - 签名**可选但推荐**；一旦条目里填了公钥，之后每个版本都必须用同一把私钥签名。
-- 本项目 0.6.1 的包与条目草稿已就绪；公开源码仓库（含 MIT LICENSE）与 `owner_ids`
-  已就绪；仍需你本人完成：GitHub Release 上传与向注册表的 PR。
+- 本项目 0.6.2 已完成：公开源码仓库、MIT LICENSE、`owner_ids`、Release `v0.6.2`，
+  以及向注册表的 PR #1563；审查提出的 LICENSE、命令权限、版本与文案问题已处理，
+  等待复核。
 
 ---
 
@@ -39,7 +40,7 @@
    - `mods/veinsweep.toml`（项目页 + 新 `[[versions]]` 记录）
    - `icons/veinsweep.png`（首次提交时）
 3. PR 描述里给出文件的 release 下载地址：
-   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.1/veinsweep-0.6.1.hmod`
+   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.2/veinsweep-0.6.2.hmod`
 4. `stage` 工作流下载该文件，核对文件名与 SHA-256 是新记录，运行检查器，
    把文件放进 `staging` 预发布（每次最多 3 个文件、每个 ≤64 MiB）。
 5. `check` 工作流对比条目与 main、校验包结构、哈希与签名，并构建候选索引。
@@ -66,12 +67,12 @@
 | `tags` | ≤10 个、小写 | 4 个，均小写 ✔ |
 | `key` / `signature` | 可选；填了 `key` 则每个版本必须带签名 | 未签名（允许）；若要签名见第 6 节 |
 | `screenshots` | 可选，≤8 张，PNG/JPEG | 无（可选，不阻塞） |
-| `[[versions]]` | `version`、`published`、`game`、`file`、`sha256`、`changelog`；新记录在最上面 | 0.6.1 ✔ |
-| 文件 | 扩展名匹配 kind；≤64 MiB；名字与条目一致 | `veinsweep-0.6.1.hmod`，36,714 字节 ✔ |
+| `[[versions]]` | `version`、`published`、`game`、`file`、`sha256`、`changelog`；新记录在最上面 | 0.6.2 ✔ |
+| 文件 | 扩展名匹配 kind；≤64 MiB；名字与条目一致 | `veinsweep-0.6.2.hmod`，37,823 字节 ✔ |
 | 源码公开仓库 | 必须有，许可证允许分发；reviewer 要读 | 已推送，公开可读 ✔ |
 | GitHub Release 附件 | 文件名必须与条目给出的名字一致 | **缺**（需你上传） |
 | `cargo horizon-mod check` | 提交前自行跑一遍（CI 也会跑） | 已用 `checker@0a875da…` 官方预编译检查器运行，通过（exit 0） |
-| 构建证明 | 原生 mod 固定到确切构建；reviewer 会看 | `native-build` 已产出 `native-0a875da-5d2421133c57`，可复现 |
+| 构建证明 | 原生 mod 固定到确切构建；reviewer 会看 | `native-build` 已产出 `native-0a875da-056ad3f32623`，可复现 |
 
 ---
 
@@ -81,7 +82,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `publish/veinsweep-0.6.1.hmod` | 要发布的分发包 |
+| `publish/veinsweep-0.6.2.hmod` | 要发布的分发包 |
 | `publish/registry/mods/veinsweep.toml` | 注册表条目草稿 |
 | `publish/registry/icons/veinsweep.png` | 正方形图标（512×512） |
 | `publish/pack.py` | 重新打包与结构校验（`python publish/pack.py`） |
@@ -96,17 +97,19 @@
 注意：本地提交身份是 `changgeng <18355166959@163.com>`（GitHub 数字 ID 21967815），
 与 `ChangGengCN`（41566656）不是同一个账号；注册表以 `owners` / `owner_ids` 为准。
 
-只能由你完成的事项：
+只能由你完成的事项（后续版本）：
 
-- **GitHub Release**：把 `veinsweep-0.6.1.hmod` 作为附件上传到公开仓库，文件名不要改。
-- **向 `horizon-rust/horizon-mods` 提 PR**：fork、提交条目与图标、写 PR 描述。
+- **GitHub Release**：每个新版本都要建新 Release 并上传新包，文件名不要改；
+  `v0.6.1`、`v0.6.2` 的附件不可替换。
+- **向 `horizon-rust/horizon-mods` 更新 PR**：更新条目后再提/追加提交。
 - **（可选）签名**：决定是否生成 minisign 密钥并固定公钥。
 
-已完成、无需再处理：公开源码仓库、许可证、`authors` / `owners` / `owner_ids`、`source`。
+已完成、无需再处理：公开源码仓库、许可证、`authors` / `owners` / `owner_ids`、
+`source`、Release `v0.6.2`、PR #1563。
 
 ---
 
-## 4. 可直接照做的步骤
+## 4. 可直接照做的步骤（首次提交已完成；后续版本照此执行）
 
 ### 4.1 准备源码仓库（已完成）
 
@@ -115,21 +118,21 @@
    - `mod/horizon-mod.toml`、`mod/Cargo.toml`、`mod/src/`、`mod/assets/`
    - `LICENSE`（MIT，2026，署名 ChangGengCN）
    - `README.md`、`README.zh-CN.md`、`AGENTS.md`、`publish/`（便于 reviewer 对照）
-3. 确认仓库里的源码与 `publish/veinsweep-0.6.1.hmod` 内的源码一致。
+3. 确认仓库里的源码与 `publish/veinsweep-0.6.2.hmod` 内的源码一致。
 
 ### 4.2 建 Release
 
-1. 在源码仓库新建 release，tag 任意（如 `v0.6.1`）。
-2. 上传 `publish/veinsweep-0.6.1.hmod`，文件名保持 `veinsweep-0.6.1.hmod`。
+1. 在源码仓库新建 release，tag 任意（如 `v0.6.2`）。
+2. 上传 `publish/veinsweep-0.6.2.hmod`，文件名保持 `veinsweep-0.6.2.hmod`。
 3. 记录下载地址：
-   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.1/veinsweep-0.6.1.hmod`。
+   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.2/veinsweep-0.6.2.hmod`。
 
 ### 4.3 填条目
 
 1. 核对 `publish/registry/mods/veinsweep.toml` 里的 `authors` / `owners` / `owner_ids` /
    `source` 已是真实值（见第 3 节）。
-2. 核对 `sha256` 与 `publish/veinsweep-0.6.1.hmod` 一致：
-   `sha256sum publish/veinsweep-0.6.1.hmod`（Windows：`Get-FileHash -Algorithm SHA256 ...`）。
+2. 核对 `sha256` 与 `publish/veinsweep-0.6.2.hmod` 一致：
+   `sha256sum publish/veinsweep-0.6.2.hmod`（Windows：`Get-FileHash -Algorithm SHA256 ...`）。
 3. 确认 `versions[0]` 是最新版本（新记录在最上面）。
 
 ### 4.4 提 PR
@@ -181,7 +184,7 @@
 
 ## 6. 本 mod 的特定风险与说明义务
 
-1. **固定到单个 Nightly**：0.6.1 只对 `Nightly 2026-11-20（0a875da）` +
+1. **固定到单个 Nightly**：0.6.2 只对 `Nightly 2026-11-20（0a875da）` +
    `Horizon Mixins e59da90` 构建与验证。换 Nightly 需要重新构建并发新版本；
    条目 changelog 与描述里已写明，避免玩家在其他构建上误装。
 2. **专用服务器上不生效**：连锁由客户端按住触发键发起；专用服务器没有客户端按键输入，
@@ -203,7 +206,7 @@
 2. 构建：`horizon-launcher native-build "<本仓库>\mod" --version nightly-2026-11-20-0a875da --trust-native-code`
    （`native-build` 接收 **mod 文件夹**，不是实例目录）。
 3. 启动测试时不要显式传 `--version`，否则会覆盖实例已选的原生构建。
-4. 检查：游戏内 Mods 列表应出现 VeinSweep 0.6.1。
+4. 检查：游戏内 Mods 列表应出现 VeinSweep 0.6.2。
 
 ---
 
@@ -211,25 +214,36 @@
 
 - [x] 公开源码仓库已就绪，`source` 指向它，许可证与 `license` 一致，仓库内有 LICENSE
 - [x] `authors`、`owners`、`owner_ids` 已替换为真实值，且与提 PR 的账号对应
-- [ ] `publish/veinsweep-0.6.1.hmod` 的 sha256 与条目一致
-      （`af5b5d6bfd2ee7a9cc800246083c46e3d8db3b91ff1542496afc8642170ae70c`）
+- [ ] `publish/veinsweep-0.6.2.hmod` 的 sha256 与条目一致
+      （`b81034c3eafbd964e85395e7a4d3388e17ebd6dc5ec901ecd048f3df8208bd42`）
 - [ ] 文件已上传到 GitHub Release，文件名未改
 - [ ] 图标为正方形 PNG、64–1024 px、≤256 KiB，随 PR 放入 `icons/veinsweep.png`
 - [ ] 摘要 ≤160 字符、描述 50–10,000 字符、类别 1–3 个、标签 ≤10 个且小写
 - [ ] `[native]` 的 `horizon` / `mixins` 与实际构建一致（0a875da… / e59da90…）
-- [ ] 0.6.1 的 `[[versions]]` 在条目顶部，`game = "26.3"`
+- [ ] 0.6.2 的 `[[versions]]` 在条目顶部，`game = "26.3"`
 - [ ] 如有公钥：本版本已签名，`signature` 已填写
-- [x] 已跑 `cargo horizon-mod check publish/veinsweep-0.6.1.hmod`（官方 checker@0a875da，exit 0）
+- [x] 已跑 `cargo horizon-mod check publish/veinsweep-0.6.2.hmod`（官方 checker@0a875da，exit 0）
 
-## 9. 本地预检结果（2026-11-21）
+## 9. 本地预检结果（2026-11-22，0.6.2）
 
 使用 registry 仓库 `checker@0a875da91dbb0fdcb7ba8c42c11341aa229af51a` 的预编译检查器
-（ELF，经 WSL 运行），在 fork 的临时提交上执行：
+（ELF，经 WSL 运行），在 base `3bffc68` 与含新条目的本地提交上执行：
 
 | 命令 | 结果 |
 | --- | --- |
-| `cargo horizon-mod check publish/veinsweep-0.6.1.hmod --kind native-mod` | 通过，exit 0；识别为 `native-1/0a875da…/e59da90…`，36,714 字节，sha256 `af5b5d6b…`，unsigned |
-| `cargo horizon-mod registry review <base> <head> --author ChangGengCN` | 通过，exit 0；仅提示 “a new native-mod by ChangGengCN” |
-| `cargo horizon-mod registry check <base> <head> --files <dir>` | 通过，exit 0 |
+| `cargo horizon-mod check publish/veinsweep-0.6.2.hmod --kind native-mod` | 通过，exit 0；识别为 `native-1/0a875da…/e59da90…`，37,823 字节，sha256 `b81034c3…`，unsigned，包内 8 个文件（含 `LICENSE`） |
+| `cargo horizon-mod registry review <base> <head> --author ChangGengCN` | 通过，exit 0；`note: veinsweep: a new native-mod by ChangGengCN` |
+| `cargo horizon-mod registry check <base> <head> --files <dir>` | 通过，exit 0；条目、图标、哈希与包结构均无问题 |
 
-这三项与 PR 的 `stage` / `check` 使用同一份固定检查器，条目字段、图标、哈希与包结构均已验证。
+`native-build` 最终产出 `native-0a875da-056ad3f32623`（0.6.2）。
+
+## 10. 审查意见处理（0.6.2）
+
+| 意见 | 处理 |
+| --- | --- |
+| R1 / C2：分发包缺 MIT 文本 | `LICENSE` 放入 `mod/` 随包分发，与仓库根一致；包内已确认存在 `LICENSE`（1068 字节） |
+| C1：黑名单命令任何玩家可改 | `add`、`remove`、`clear` 改为 `Command::op(..., 2)`；`list` 保持公开 |
+| C3：需要发新版本 | 升到 0.6.2，新 Release（`v0.6.2`）与新 sha256，未改 `v0.6.1` 附件 |
+| N1：`keep = 0` 时工具损坏仍徒手连锁 | 连锁开始时记录主手物品；中途空手或换物品（工具损坏）立即停止 |
+| N2：条目有中文草稿注释、摘要/描述仅中文 | 删除文件头注释；`summary` 与 `description` 改为中英双语并精简 |
+| N3：清单 `authors` 与条目不一致 | `horizon-mod.toml` 的 `authors` 改为 `["ChangGengCN"]` |

@@ -5,7 +5,7 @@ horizon_mod_package::index::native::Bundle）的规则做结构校验。
 改动源码后运行它，然后把打印出的 sha256 更新到
 publish/registry/mods/veinsweep.toml 和 publish/SUBMIT.md。
 
-新版格式（Horizon Nightly 2026-11-18，0b14f8a）：
+新版格式（Horizon Nightly 2026-11-20，0a875da）：
 - 每个 mod 一个 .hmod（zip），根目录是 horizon-mod.toml；
 - 原生 mod 带 Cargo.toml、Cargo.lock 与 src/；
 - 可选 icon.png、assets/<id>/、data/<id>/；
@@ -21,10 +21,10 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MOD = ROOT / "mod"
-OUT = ROOT / "publish" / "veinsweep-0.6.1.hmod"
+OUT = ROOT / "publish" / "veinsweep-0.6.2.hmod"
 
 MOD_ID = "veinsweep"
-VERSION = "0.6.1"
+VERSION = "0.6.2"
 GAME = "26.3"
 # 开发与实测所用的 Horizon 提交（Nightly 2026-11-20）。
 HORIZON = "0a875da91dbb0fdcb7ba8c42c11341aa229af51a"

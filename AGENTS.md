@@ -23,11 +23,12 @@ VeinSweep/
 │   ├── horizon-mod.toml       # 清单：id、version、description、api、[native] 固定构建
 │   ├── Cargo.toml
 │   ├── src/lib.rs             # 钩子、设置、命令、黑名单
+│   ├── LICENSE                # MIT 文本，随包分发，必须与仓库根一致
 │   ├── assets/veinsweep/lang  # 设置项、提示与命令反馈的英/简中/繁中文本
 │   └── .horizon/sdk/          # 固定构建的 SDK（不入库、不入包）
 ├── publish/
 │   ├── pack.py                # 生成 .hmod 并做结构校验
-│   ├── veinsweep-0.6.1.hmod   # 分发包（构建产物，不入库）
+│   ├── veinsweep-0.6.2.hmod   # 分发包（构建产物，不入库）
 │   ├── SUBMIT.md              # 上架说明：包格式、注册表、提交流程
 │   └── registry/              # 注册表条目与图标
 ├── README.md                  # 项目描述与玩家使用说明（英文，仓库默认）
@@ -55,11 +56,13 @@ VeinSweep/
 
 - 启动器每次构建会产出 `native-<commit>-<hash>` 目录；源码变化可能生成新 tag。
   tag 用于实测记录，不参与打包；提交与报告中写最终一次构建的 tag
-  （0.6.1 为 `native-0a875da-5d2421133c57`）。
+  （0.6.2 为 `native-0a875da-056ad3f32623`）。
 - 升级固定构建：同时改 `horizon-mod.toml` 的 `[native] horizon` / `mixins`、
   `pack.py` 的 `HORIZON` / `MIXINS`，重新 `native-build` 并跑完整实测，
   然后发新版本；旧版本在新 Nightly 上会构建失败，属预期。
 - 旧 `.hmod` 包发布前删除，`publish/` 只保留当前版本的分发包。
+- `mod/LICENSE` 必须存在且与仓库根 `LICENSE` 内容一致：注册表审查要求分发
+  包内自带许可证文本；打包后核对包内确有 `LICENSE`。
 
 ## 3. 行为规范（实现约束）
 
@@ -77,6 +80,8 @@ VeinSweep/
 - **创造模式**：默认不连锁；打开“创造模式连锁”后仍要按住触发键，按创造规则
   不掉落、不耗耐久。
 - **无手持物判定**：空手、木头、镐走同一套规则；掉落仍按原版。
+- **工具损坏即停**：连锁开始时记录主手物品；中途变成空手或换成别的物品
+  （工具损坏/被替换）就立即停止，不再徒手继续扩散。`keep = 0` 同样适用。
 - **面向玩家的文本**：设置名、提示、命令反馈、按键名全部走语言文件
   （`assets/veinsweep/lang/{en_us,zh_cn,zh_tw}.json`），三种语言键集合必须一致；
   英文为回退语言。文案只描述功能，不写 BFS、API、钩子、伪随机、提交号等技术词。
@@ -90,7 +95,7 @@ VeinSweep/
 
 ### 启动器界面
 
-1. 把 `publish/veinsweep-0.6.1.hmod`（或整个 `mod/` 文件夹）放进实例的
+1. 把 `publish/veinsweep-0.6.2.hmod`（或整个 `mod/` 文件夹）放进实例的
    `horizon-native-mods/`（游戏里 **选项 → 模组 → Open Mod Folder** 打开的就是这里）。
 2. 在启动器的 Mods 页把 VeinSweep 打开（等价于 `horizon-mods.txt` 里写
    `mod.veinsweep:true`）。
@@ -135,8 +140,9 @@ python publish/pack.py
 输出会打印 `size`、`sha256`、`files` 与 `bundle check: OK`；把哈希同步到注册表条目、
 `SUBMIT.md` 和本文件（README 不再放发布信息）。
 
-当前分发包：`publish/veinsweep-0.6.1.hmod`，36714 字节，sha256
-`af5b5d6bfd2ee7a9cc800246083c46e3d8db3b91ff1542496afc8642170ae70c`。
+当前分发包：`publish/veinsweep-0.6.2.hmod`，37823 字节，sha256
+`b81034c3eafbd964e85395e7a4d3388e17ebd6dc5ec901ecd048f3df8208bd42`，
+包内 8 个文件（含 `LICENSE`）。
 
 ## 6. 校验与实测要求
 
@@ -189,3 +195,6 @@ python publish/pack.py
   设置项；描述文案改为只讲功能；界面文本新增英文与繁体中文。
 - 0.6.1 清单描述改为“简体中文 + 英文”的组合文本（模组列表直接显示两种语言）；
   开发者文档迁移到本文件。
+- 0.6.2 包内加入 MIT LICENSE；黑名单 `add`/`remove`/`clear` 改为权限等级 2
+  （`list` 仍公开）；连锁中途工具损坏时立即停止；清单作者统一为
+  `ChangGengCN`；注册表摘要与描述改为中英双语。
