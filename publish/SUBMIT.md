@@ -1,6 +1,6 @@
 # 把 VeinSweep 上架 Horizon 官方注册表
 
-本文按 **Nightly 2026-11-21（`f037744a79f9982c47876f49c5a3067279f88706`）对应的文档**核对：
+本文按 **Nightly 2026-11-22（`2b77287de099c9316278ba7ac4d83590fdb7ef30`）对应的文档**核对：
 `docs/modding/src/how-to/publish.md`、`docs/modding/src/reference/registry-index.md`、
 `horizon-rust/horizon-mods` 的 `README.md` 与 `MOD-POLICY.md`。
 
@@ -20,8 +20,9 @@
 - 每个新项目、每个 mod 版本都要**人工审核**（原生代码以玩家权限运行，还会做源码安全审查）。
 - 文件以 SHA-256 固定；已发布的文件永不替换，升级只能发新版本。
 - 签名**可选但推荐**；一旦条目里填了公钥，之后每个版本都必须用同一把私钥签名。
-- 本项目 0.6.2 已发布（PR #1563）；0.6.3 已适配 Nightly 2026-11-21（`f037744`），
-  重新编译、打包、跑官方检查器并在生存模式实测，随后通过同一 PR 更新。
+- 本项目 0.6.2 已发布（PR #1563）；0.6.3（Nightly 2026-11-21）与本版 0.6.4
+  （Nightly 2026-11-22，`2b77287`）均已重新编译、打包、跑官方检查器并在生存模式实测，
+  通过同一 PR 更新。
 
 ---
 
@@ -39,7 +40,7 @@
    - `mods/veinsweep.toml`（项目页 + 新 `[[versions]]` 记录）
    - `icons/veinsweep.png`（首次提交时）
 3. PR 描述里给出文件的 release 下载地址：
-   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.3/veinsweep-0.6.3.hmod`
+   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.4/veinsweep-0.6.4.hmod`
 4. `stage` 工作流下载该文件，核对文件名与 SHA-256 是新记录，运行检查器，
    把文件放进 `staging` 预发布（每次最多 3 个文件、每个 ≤64 MiB）。
 5. `check` 工作流对比条目与 main、校验包结构、哈希与签名，并构建候选索引。
@@ -66,12 +67,12 @@
 | `tags` | ≤10 个、小写 | 4 个，均小写 ✔ |
 | `key` / `signature` | 可选；填了 `key` 则每个版本必须带签名 | 未签名（允许）；若要签名见第 6 节 |
 | `screenshots` | 可选，≤8 张，PNG/JPEG | 无（可选，不阻塞） |
-| `[[versions]]` | `version`、`published`、`game`、`file`、`sha256`、`changelog`；新记录在最上面 | 0.6.3、0.6.2 ✔ |
-| 文件 | 扩展名匹配 kind；≤64 MiB；名字与条目一致 | `veinsweep-0.6.3.hmod`，37,826 字节 ✔ |
+| `[[versions]]` | `version`、`published`、`game`、`file`、`sha256`、`changelog`；新记录在最上面 | 0.6.4、0.6.2 ✔ |
+| 文件 | 扩展名匹配 kind；≤64 MiB；名字与条目一致 | `veinsweep-0.6.4.hmod`，37,823 字节 ✔ |
 | 源码公开仓库 | 必须有，许可证允许分发；reviewer 要读 | 已推送，公开可读 ✔ |
 | GitHub Release 附件 | 文件名必须与条目给出的名字一致 | **缺**（需你上传） |
-| `cargo horizon-mod check` | 提交前自行跑一遍（CI 也会跑） | 已用 `checker@f037744…` 官方预编译检查器运行，通过（exit 0） |
-| 构建证明 | 原生 mod 固定到确切构建；reviewer 会看 | `native-build` 已产出 `native-f037744-f12e25f98ff5`，可复现 |
+| `cargo horizon-mod check` | 提交前自行跑一遍（CI 也会跑） | 已用 `checker@2b77287…` 官方预编译检查器运行，通过（exit 0） |
+| 构建证明 | 原生 mod 固定到确切构建；reviewer 会看 | `native-build` 已产出 `native-2b77287-1f63409f95d0`，可复现 |
 
 ---
 
@@ -81,7 +82,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `publish/veinsweep-0.6.3.hmod` | 要发布的分发包 |
+| `publish/veinsweep-0.6.4.hmod` | 要发布的分发包 |
 | `publish/registry/mods/veinsweep.toml` | 注册表条目草稿 |
 | `publish/registry/icons/veinsweep.png` | 正方形图标（512×512） |
 | `publish/pack.py` | 重新打包与结构校验（`python publish/pack.py`） |
@@ -99,12 +100,12 @@
 只能由你完成的事项（后续版本）：
 
 - **GitHub Release**：每个新版本都要建新 Release 并上传新包，文件名不要改；
-  `v0.6.1`、`v0.6.2`、`v0.6.3` 的附件不可替换。
+  `v0.6.1`、`v0.6.2`、`v0.6.4` 的附件不可替换。
 - **向 `horizon-rust/horizon-mods` 更新 PR**：更新条目后再提/追加提交。
 - **（可选）签名**：决定是否生成 minisign 密钥并固定公钥。
 
 已完成、无需再处理：公开源码仓库、许可证、`authors` / `owners` / `owner_ids`、
-`source`、Release `v0.6.3`、PR #1563。
+`source`、Release `v0.6.4`、PR #1563。
 
 ---
 
@@ -117,21 +118,21 @@
    - `mod/horizon-mod.toml`、`mod/Cargo.toml`、`mod/src/`、`mod/assets/`
    - `LICENSE`（MIT，2026，署名 ChangGengCN）
    - `README.md`、`README.zh-CN.md`、`AGENTS.md`、`publish/`（便于 reviewer 对照）
-3. 确认仓库里的源码与 `publish/veinsweep-0.6.3.hmod` 内的源码一致。
+3. 确认仓库里的源码与 `publish/veinsweep-0.6.4.hmod` 内的源码一致。
 
 ### 4.2 建 Release
 
-1. 在源码仓库新建 release，tag 任意（如 `v0.6.3`）。
-2. 上传 `publish/veinsweep-0.6.3.hmod`，文件名保持 `veinsweep-0.6.3.hmod`。
+1. 在源码仓库新建 release，tag 任意（如 `v0.6.4`）。
+2. 上传 `publish/veinsweep-0.6.4.hmod`，文件名保持 `veinsweep-0.6.4.hmod`。
 3. 记录下载地址：
-   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.3/veinsweep-0.6.3.hmod`。
+   `https://github.com/ChangGengCN/VeinSweep/releases/download/v0.6.4/veinsweep-0.6.4.hmod`。
 
 ### 4.3 填条目
 
 1. 核对 `publish/registry/mods/veinsweep.toml` 里的 `authors` / `owners` / `owner_ids` /
    `source` 已是真实值（见第 3 节）。
-2. 核对 `sha256` 与 `publish/veinsweep-0.6.3.hmod` 一致：
-   `sha256sum publish/veinsweep-0.6.3.hmod`（Windows：`Get-FileHash -Algorithm SHA256 ...`）。
+2. 核对 `sha256` 与 `publish/veinsweep-0.6.4.hmod` 一致：
+   `sha256sum publish/veinsweep-0.6.4.hmod`（Windows：`Get-FileHash -Algorithm SHA256 ...`）。
 3. 确认 `versions[0]` 是最新版本（新记录在最上面）。
 
 ### 4.4 提 PR
@@ -143,7 +144,7 @@
 3. PR 标题如 `Add VeinSweep`，并按仓库的 `.github/PULL_REQUEST_TEMPLATE.md` 勾选声明；
    描述里必须放第 4.2 步的 release 下载地址（`stage` 只从 PR 描述里读链接），并说明：
    - 这是原生 mod，源码仓库地址；
-   - 固定的 Nightly 2026-11-21（`f037744`）与 mixins `e59da90`，仅在该构建验证；
+   - 固定的 Nightly 2026-11-22（`2b77287`）与 mixins `e59da90`，仅在该构建验证；
    - 已在本地用 `native-build` 构建并实测；
    - 连锁由客户端按键触发，专用服务器上不生效；
    - 与已有 Veinminer / TreeFall 的差异（不限手持物、只在同种方块内扩散、黑名单命令、
@@ -183,7 +184,7 @@
 
 ## 6. 本 mod 的特定风险与说明义务
 
-1. **固定到单个 Nightly**：0.6.3 只对 `Nightly 2026-11-21（f037744）` +
+1. **固定到单个 Nightly**：0.6.4 只对 `Nightly 2026-11-22（2b77287）` +
    `Horizon Mixins e59da90` 构建与验证。换 Nightly 需要重新构建并发新版本；
    条目 changelog 与描述里已写明，避免玩家在其他构建上误装。
 2. **专用服务器上不生效**：连锁由客户端按住触发键发起；专用服务器没有客户端按键输入，
@@ -201,11 +202,11 @@
 
 ## 7. 本地安装与构建（速查）
 
-1. 准备构建：`horizon-launcher prepare --version nightly-2026-11-21-f037744`。
-2. 构建：`horizon-launcher native-build "<本仓库>\mod" --version nightly-2026-11-21-f037744 --trust-native-code`
+1. 准备构建：`horizon-launcher prepare --version nightly-2026-11-22-2b77287`。
+2. 构建：`horizon-launcher native-build "<本仓库>\mod" --version nightly-2026-11-22-2b77287 --trust-native-code`
    （`native-build` 接收 **mod 文件夹**，不是实例目录）。
 3. 启动测试时不要显式传 `--version`，否则会覆盖实例已选的原生构建。
-4. 检查：游戏内 Mods 列表应出现 VeinSweep 0.6.3。
+4. 检查：游戏内 Mods 列表应出现 VeinSweep 0.6.4。
 
 ---
 
@@ -213,44 +214,44 @@
 
 - [x] 公开源码仓库已就绪，`source` 指向它，许可证与 `license` 一致，仓库内有 LICENSE
 - [x] `authors`、`owners`、`owner_ids` 已替换为真实值，且与提 PR 的账号对应
-- [ ] `publish/veinsweep-0.6.3.hmod` 的 sha256 与条目一致
-      （`ef3fd5cac362a040abe24fc6bcff2bb8ff07d06fb53e67bba46234f3953528f1`）
+- [ ] `publish/veinsweep-0.6.4.hmod` 的 sha256 与条目一致
+      （`4935989ca58db5dcf8102fa28c551d462ec34dc69539344a8351de791c1fe0eb`）
 - [ ] 文件已上传到 GitHub Release，文件名未改
 - [ ] 图标为正方形 PNG、64–1024 px、≤256 KiB，随 PR 放入 `icons/veinsweep.png`
 - [ ] 摘要 ≤160 字符、描述 50–10,000 字符、类别 1–3 个、标签 ≤10 个且小写
-- [ ] `[native]` 的 `horizon` / `mixins` 与实际构建一致（f037744… / e59da90…）
-- [ ] 0.6.3 的 `[[versions]]` 在条目顶部，`game = "26.3"`
+- [ ] `[native]` 的 `horizon` / `mixins` 与实际构建一致（2b77287… / e59da90…）
+- [ ] 0.6.4 的 `[[versions]]` 在条目顶部，`game = "26.3"`
 - [ ] 如有公钥：本版本已签名，`signature` 已填写
-- [x] 已跑 `cargo horizon-mod check publish/veinsweep-0.6.3.hmod`（官方 checker@f037744，exit 0）
+- [x] 已跑 `cargo horizon-mod check publish/veinsweep-0.6.4.hmod`（官方 checker@2b77287，exit 0）
 
-## 9. 本地预检结果（2026-11-22，0.6.3）
+## 9. 本地预检结果（2026-11-22，0.6.4）
 
 使用 registry 仓库 `checker@f037744a79f9982c47876f49c5a3067279f88706` 的预编译检查器
-（ELF，经 WSL 运行），base 为 registry main `47a586c`（`.github/horizon-rev` 已是
-`f037744`），head 为把新条目并入 main 的树：
+（ELF，经 WSL 运行；registry main `362bb1c` 的 `.github/horizon-rev` 仍是 `f037744`，
+包格式同为 6），base 为 `362bb1c`，head 为把新条目并入 main 的树：
 
 | 命令 | 结果 |
 | --- | --- |
-| `cargo horizon-mod check publish/veinsweep-0.6.3.hmod --kind native-mod` | 通过，exit 0；识别为 `native-1/f037744…/e59da90…`，37,826 字节，sha256 `ef3fd5ca…`，unsigned，包内 8 个文件（含 `LICENSE`） |
+| `cargo horizon-mod check publish/veinsweep-0.6.4.hmod --kind native-mod` | 通过，exit 0；识别为 `native-1/2b77287…/e59da90…`，37,823 字节，sha256 `4935989c…`，unsigned，包内 8 个文件（含 `LICENSE`） |
 | `cargo horizon-mod registry review <base> <head> --author ChangGengCN` | 通过，exit 0；`note: veinsweep: a new native-mod by ChangGengCN` |
-| `cargo horizon-mod registry check <base> <head> --files <dir>` | 通过，exit 0；0.6.3 与 0.6.2 两个版本的文件、哈希与包结构均无问题 |
+| `cargo horizon-mod registry check <base> <head> --files <dir>` | 通过，exit 0；0.6.4、0.6.3 与 0.6.2 三个版本的文件、哈希与包结构均无问题 |
 
-`native-build` 最终产出 `native-f037744-f12e25f98ff5`（0.6.3）。
+`native-build` 最终产出 `native-2b77287-1f63409f95d0`（0.6.4）。
 
-## 10. 游戏内实测（0.6.3，`native-f037744-f12e25f98ff5`）
+## 10. 游戏内实测（0.6.4，`native-2b77287-1f63409f95d0`）
 
 生存模式，默认设置（`limit = 32`，`keep = 0`，`enabled` 默认开），手持钻石镐按住
 左 Shift 并用左键挖方块：
 
 | 场景 | 结果 |
 | --- | --- |
-| 按住触发键 | 3×3×3 石方从 27 块降到 13 块，相邻泥土未被破坏（只扩散同种方块） |
-| 不按触发键 | 27 → 26，只破坏手动那一块 |
-| 黑名单含 `minecraft:stone` + 按住 | 27 → 26，起点被拦截 |
+| 按住触发键 | 3×3×3 石方从 27 块降到 7 块（连锁 20 块），相邻泥土未被破坏（只扩散同种方块） |
+| 不按触发键 | 只破坏手动那一块 |
+| 黑名单含 `minecraft:stone` + 按住 | 只破坏手动那一块，起点被拦截 |
 | 木镐余 1 耐久 + 按住 | 手动块破坏后工具损坏，连锁立即停止，主手变空 |
-| 7×7×7 石立方（343 块） | 343 → 313，连锁 30 块，在上限 32 与目标区间 20–32 内 |
-| `enabled = false`（重启游戏） | 27 → 26，总开关关闭后只破一块 |
-| 删除 `enabled`（重启游戏） | 27 → 4，恢复默认开启 |
+| 7×7×7 石立方（343 块） | 343 → 322，连锁 21 块，在上限 32 与目标区间 20–32 内 |
+| `enabled = false`（重启游戏） | 只破一块，总开关关闭后连锁不触发 |
+| 删除 `enabled`（重启游戏） | 27 → 3，恢复默认开启 |
 
 ## 11. 审查意见处理（0.6.2）
 
