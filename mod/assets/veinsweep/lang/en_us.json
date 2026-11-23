@@ -3,7 +3,6 @@
   "veinsweep.setting.enabled": "Chain mining",
   "veinsweep.setting.enabled.tooltip": "Off: chain mining is fully disabled and breaking a block destroys only that block",
   "veinsweep.setting.limit": "Maximum blocks",
-  "veinsweep.setting.inventory": "Drops go to inventory",
   "veinsweep.setting.keep": "Keep tool durability",
   "veinsweep.setting.creative": "Chain in creative mode",
   "veinsweep.key.trigger": "Chain trigger",

@@ -4,7 +4,7 @@
 
 Hold the sneak key (by default; change it in Options → Controls → VeinSweep) while you break a block, and every connected block **of the same type** breaks with it. Ore veins and logs come out in one go; dirt, stone and sand tear out as an irregular patch nearby, a different shape each time.
 
-Chain breaking spreads only through the same block type and ignores what you are holding: bare hands, wood or a pickaxe all behave the same. Every breakable block can chain, while unbreakable blocks such as bedrock and blocks with contents such as chests and furnaces are skipped, and anything on the blacklist is ignored. The settings screen can turn chaining off at any time, change how many blocks one break may take, send drops straight to your inventory, stop before a tool breaks, and allow chaining in creative mode.
+Chain breaking spreads only through the same block type and ignores what you are holding: bare hands, wood or a pickaxe all behave the same. Every breakable block can chain, while unbreakable blocks such as bedrock and blocks with contents such as chests and furnaces are skipped, and anything on the blacklist is ignored. The settings screen can turn chaining off at any time, change how many blocks one break may take, stop before a tool breaks, and allow chaining in creative mode. Drops always scatter in the world, as normal block breaking does.
 
 The interface supports English, Simplified Chinese and Traditional Chinese and follows the game language (English is used when a translation is missing).
 
@@ -28,13 +28,12 @@ Protective rules (always active):
 
 ## Settings (Options → Mods → VeinSweep → Config)
 
-Five entries, in this order:
+Four entries, in this order:
 
 | Setting | Type | Default |
 | --- | --- | --- |
 | Chain breaking | Toggle (master switch) | On |
 | Max blocks | Slider (8–256, step 8) | 32 |
-| Drops to inventory | Toggle | Off (scatter in the world) |
 | Preserve tool durability | Slider (0–10) | 0 |
 | Creative chaining | Toggle | Off |
 

@@ -109,11 +109,6 @@ impl Hooks for VeinSweep {
             LIMIT_STEP,
             32.0,
         ));
-        let _ = r.register_setting(SettingSpec::toggle(
-            "inventory",
-            "veinsweep.setting.inventory",
-            false,
-        ));
         let _ = r.register_setting(SettingSpec::range(
             "keep",
             "veinsweep.setting.keep",
@@ -245,7 +240,6 @@ impl Hooks for VeinSweep {
 
         let limit = setting_number(host, "limit", 32.0).clamp(LIMIT_MIN, LIMIT_MAX) as u32;
         let keep = setting_number(host, "keep", 0.0).clamp(0.0, 10.0) as u32;
-        let into_inventory = setting_bool(host, "inventory", false);
         // 连锁开始时的主手物品：中途工具损坏（空手或换成别的物品）就停止连锁。
         let start_item = hand_stack(host, player).map(|stack| stack.item());
         let Some(level) = player.level(host) else {
@@ -265,7 +259,6 @@ impl Hooks for VeinSweep {
                 limit,
                 keep,
                 start_item,
-                into_inventory,
             );
         } else {
             // 泥土、石头、沙子：在固定半径内随机生长出一块连通的区域，
@@ -280,7 +273,6 @@ impl Hooks for VeinSweep {
                 limit,
                 keep,
                 start_item,
-                into_inventory,
                 SCATTER_RADIUS,
             );
         }
@@ -345,7 +337,6 @@ fn chain_vein(
     limit: u32,
     keep: u32,
     start_item: Option<mod_api::ItemKey>,
-    into_inventory: bool,
 ) {
     let mut seen: HashSet<[i32; 3]> = HashSet::new();
     seen.insert(origin_pos);
@@ -369,7 +360,7 @@ fn chain_vein(
             if !durability_left(host, player, keep, start_item) {
                 return;
             }
-            if player.destroy_block(host, next, into_inventory) {
+            if player.destroy_block(host, next, false) {
                 broken += 1;
                 queue.push_back(next);
             }
@@ -391,7 +382,6 @@ fn chain_scatter(
     limit: u32,
     keep: u32,
     start_item: Option<mod_api::ItemKey>,
-    into_inventory: bool,
     radius: i32,
 ) {
     let mut rng = Rng::new(random_seed(origin_pos, origin));
@@ -429,7 +419,7 @@ fn chain_scatter(
         if !durability_left(host, player, keep, start_item) {
             return;
         }
-        if player.destroy_block(host, next, into_inventory) {
+        if player.destroy_block(host, next, false) {
             chosen.insert(next);
             broken += 1;
             push_scatter_neighbours(

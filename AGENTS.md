@@ -28,7 +28,7 @@ VeinSweep/
 │   └── .horizon/sdk/          # 固定构建的 SDK（不入库、不入包）
 ├── publish/
 │   ├── pack.py                # 生成 .hmod 并做结构校验
-│   ├── veinsweep-0.6.4.hmod   # 分发包（构建产物，不入库）
+│   ├── veinsweep-0.6.5.hmod   # 分发包（构建产物，不入库）
 │   ├── SUBMIT.md              # 上架说明：包格式、注册表、提交流程
 │   └── registry/              # 注册表条目与图标
 ├── README.md                  # 项目描述与玩家使用说明（英文，仓库默认）
@@ -40,7 +40,7 @@ VeinSweep/
 
 ## 2. 固定构建与版本维护
 
-固定构建：Horizon `2b77287de099c9316278ba7ac4d83590fdb7ef30`
+固定构建：Horizon `f1bb66f353cf67f2aa4665293fc75c8d91186fc7`
 （Nightly 2026-11-22），horizon-mixins `e59da9094f0c2fdda6c627fe9eff22dec6a906f0`。
 
 发版时版本号与哈希分散在多处，必须同步：
@@ -56,7 +56,7 @@ VeinSweep/
 
 - 启动器每次构建会产出 `native-<commit>-<hash>` 目录；源码变化可能生成新 tag。
   tag 用于实测记录，不参与打包；提交与报告中写最终一次构建的 tag
-  （0.6.4 为 `native-2b77287-1f63409f95d0`）。
+  （0.6.5 为 `native-f1bb66f-6df00e6bd78f`）。
 - 升级固定构建：同时改 `horizon-mod.toml` 的 `[native] horizon` / `mixins`、
   `pack.py` 的 `HORIZON` / `MIXINS`，重新 `native-build` 并跑完整实测，
   然后发新版本；旧版本在新 Nightly 上会构建失败，属预期。
@@ -95,7 +95,7 @@ VeinSweep/
 
 ### 启动器界面
 
-1. 把 `publish/veinsweep-0.6.4.hmod`（或整个 `mod/` 文件夹）放进实例的
+1. 把 `publish/veinsweep-0.6.5.hmod`（或整个 `mod/` 文件夹）放进实例的
    `horizon-native-mods/`（游戏里 **选项 → 模组 → Open Mod Folder** 打开的就是这里）。
 2. 在启动器的 Mods 页把 VeinSweep 打开（等价于 `horizon-mods.txt` 里写
    `mod.veinsweep:true`）。
@@ -111,7 +111,7 @@ VeinSweep/
 # 指定实例与版本
 & "$env:LOCALAPPDATA\Programs\Horizon Launcher\horizon-launcher.exe" native-build `
     "e:\Project\Game\Minecraft\Horizon\VeinSweep\mod" `
-    --instance "My Instance" --version nightly-2026-11-22-2b77287 --trust-native-code
+    --instance "My Instance" --version nightly-2026-11-22-f1bb66f --trust-native-code
 ```
 
 - `native-build` 需要先把该 Nightly 准备好（`horizon-launcher prepare --version ...`）。
@@ -140,9 +140,9 @@ python publish/pack.py
 输出会打印 `size`、`sha256`、`files` 与 `bundle check: OK`；把哈希同步到注册表条目、
 `SUBMIT.md` 和本文件（README 不再放发布信息）。
 
-当前分发包：`publish/veinsweep-0.6.4.hmod`，37823 字节，sha256
-`4935989ca58db5dcf8102fa28c551d462ec34dc69539344a8351de791c1fe0eb`，
-包内 8 个文件（含 `LICENSE`）。
+当前分发包：`publish/veinsweep-0.6.5.hmod`，40142 字节，sha256
+`6eccbec432b5a665935be0e98d7ab59dd4b2eddba5a272b995a06bea86686c31`，
+包内 9 个文件（含 `LICENSE` 与 `icon.png`）。
 
 ## 6. 校验与实测要求
 
@@ -154,7 +154,7 @@ python publish/pack.py
    - 默认触发键（左 Shift）按住能连锁，松开后单次只破一块；
    - 在 选项 → 控制 → VeinSweep 改键后仍生效，实例 `horizon-mods.txt` 写入
      `key.veinsweep.trigger:<键名>`；
-   - 设置页 5 项与默认值正确，语言文件无缺键；
+   - 设置页 4 项与默认值正确，语言文件无缺键；
    - 三种语言下设置名、提示、命令反馈显示正确；
    - 矿脉 26 向整条带走、普通方块扩散不超出半径 4 与上限、黑名单拦截、
      创造模式门控、空手与持物一致。
@@ -203,3 +203,5 @@ python publish/pack.py
   黑名单、上限与总开关。
 - 0.6.4 固定构建更新为 Nightly 2026-11-22（`2b77287`），mixins `e59da90` 不变；
   功能与设置不变，已在新构建上重新编译并在生存模式复测同一组行为。
+- 0.6.5 移除「掉落直接入包」设置，掉落一律走世界掉落；固定构建更新为
+  Nightly 2026-11-22 最新构建（`f1bb66f`），mixins `e59da90` 不变。

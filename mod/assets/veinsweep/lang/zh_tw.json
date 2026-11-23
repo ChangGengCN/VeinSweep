@@ -3,7 +3,6 @@
   "veinsweep.setting.enabled": "連鎖破壞",
   "veinsweep.setting.enabled.tooltip": "關閉後連鎖完全停用，挖方塊只破壞手動那一個",
   "veinsweep.setting.limit": "最大方塊數",
-  "veinsweep.setting.inventory": "掉落直接入包",
   "veinsweep.setting.keep": "保留工具耐久",
   "veinsweep.setting.creative": "創造模式連鎖",
   "veinsweep.key.trigger": "連鎖觸發鍵",
